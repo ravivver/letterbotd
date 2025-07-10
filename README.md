@@ -1,6 +1,8 @@
 # 🎬 Letterboxd Discord Bot
 
-Um bot para Discord desenvolvido em Node.js que integra funcionalidades da plataforma Letterboxd diretamente nos seus servidores! Obtenha informações sobre filmes assistidos, reviews, filmes favoritos e mais, diretamente do perfil dos usuários do Letterboxd.
+Um bot completo para Discord desenvolvido em Node.js que integra funcionalidades da plataforma Letterboxd diretamente nos seus servidores!
+
+Este bot permite que os usuários vinculem seus perfis do Letterboxd e compartilhem suas atividades, estatísticas, reviews, filmes favoritos e até comparem seus gostos com outros membros do servidor.
 
 ## ⚠️ Considerações Técnicas
 
@@ -8,110 +10,78 @@ Este projeto utiliza **web scraping** para coletar dados da plataforma Letterbox
 
 Optar pelo web scraping permite a flexibilidade de extrair as informações necessárias diretamente das páginas HTML visíveis, possibilitando o desenvolvimento das funcionalidades desejadas, embora exija manutenção caso a estrutura do site do Letterboxd sofra alterações.
 
-## ✨ Tecnologias Utilizadas
+## ✨ Funcionalidades Principais
 
-* **Node.js**: Ambiente de execução.
-* **discord.js**: Biblioteca para interação com a API do Discord.
-* **axios**: Cliente HTTP para fazer requisições web.
-* **cheerio**: Biblioteca para web scraping (análise de HTML).
-* **sharp**: Processamento e manipulação de imagens para criar grades de pôsteres.
+* **Busca Completa:** Pesquise filmes e diretores com o comando `/search`.
+* **Interação com Perfil:** Veja estatísticas, favoritos, diário e reviews com os comandos `/profile`, `/favorites`, `/diary` e `/review`.
+* **Análise de Atividade:** Verifique se um filme já foi assistido por alguém com `/checkfilm`.
+* **Features Sociais:** Compare os filmes em comum entre dois usuários com `/compare` e receba sugestões da watchlist com `/hint`.
+* **Ranking do Servidor:** Descubra os filmes mais populares do servidor com o comando `/top`!
+* **Geração de Imagens:** Crie grades de pôsteres personalizadas com os comandos `/favorites` e `/likesgrid`.
 
-## 🚀 Configuração e Instalação
+## 🚀 Tecnologias Utilizadas
 
-Siga estes passos para colocar o bot em funcionamento em seu ambiente local ou em um servidor.
+* **Node.js**
+* **discord.js v14+** (Slash Commands, Buttons, Select Menus, Embeds)
+* **axios** & **cheerio** para Web Scraping dos dados do Letterboxd.
+* **API do TMDB** para enriquecimento de dados (pôsteres, sinopses, diretores).
+* **sharp** para manipulação de imagens.
+* **sqlite3** para armazenamento de dados persistentes para o ranking do servidor.
 
-### Pré-requisitos
+## 🤖 Comandos Disponíveis
 
-* Node.js (versão 18.x ou superior)
-* npm (gerenciador de pacotes do Node.js, geralmente vem com o Node.js)
-* Conta de desenvolvedor Discord para criar um bot e obter seu TOKEN.
-* Chave de API do TMDB (The Movie Database) para obter informações e pôsteres de filmes.
+Aqui está a lista completa de comandos:
 
-### Passos de Instalação
+* **`/link [username]`**: Vincula sua conta Discord a um perfil Letterboxd.
+* **`/unlink`**: Desvincula sua conta.
+* **`/search film: [termo]`**: Busca por um filme ou diretor.
+* **`/checkfilm user: [@usuario] film: [filme]`**: Verifica se um usuário já assistiu a um filme.
+* **`/profile [user]`**: Exibe as estatísticas gerais de um perfil Letterboxd.
+* **`/favorites [user]`**: Mostra os 4 filmes favoritos de um usuário em uma lista e grade.
+* **`/diary [user] [dia] [mes] [ano]`**: Mostra os filmes assistidos em uma data específica.
+* **`/review [user] [film]`**: Exibe a última review ou busca uma review específica.
+* **`/likesgrid [user]`**: Gera uma grade personalizada com pôsteres dos filmes curtidos.
+* **`/compare user1: [@usuario] [user2: @usuario]`**: Compara e lista os filmes em comum entre dois usuários, com paginação.
+* **`/hint [user]`**: Sugere um filme aleatório da watchlist de um usuário.
+* **`/top`**: Exibe o top 5 filmes mais assistidos pelos membros do servidor que usaram `/sync`.
+* **`/sync`**: Sincroniza seu diário do Letterboxd para alimentar o ranking do servidor.
+* **`/help`**: Mostra esta lista de comandos.
+
+## 🔧 Configuração e Instalação
+
+Siga os passos abaixo para rodar sua própria instância do bot.
 
 1.  **Clone o Repositório:**
     ```bash
-    git clone [https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git](https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git)
-    cd SEU_REPOSITORIO # Entre na pasta do projeto
+    git clone [https://github.com/ravivver/letterbotd.git](https://github.com/ravivver/letterbotd.git)
+    cd letterbotd
     ```
-    *(Substitua `SEU_USUARIO` e `SEU_REPOSITORIO` pelos seus dados reais do GitHub.)*
-
 2.  **Instale as Dependências:**
     ```bash
     npm install
     ```
-
-3.  **Configuração de Variáveis de Ambiente (`.env`):**
-    Crie um arquivo chamado `.env` na raiz do seu projeto (na mesma pasta onde está `package.json` e `env.example`). Copie o conteúdo de `env.example` para `.env` e preencha com suas chaves e tokens reais.
-
+3.  **Configure o `.env`:**
+    * Crie um arquivo `.env` na raiz do projeto.
+    * Adicione as seguintes variáveis com suas chaves:
+        ```env
+        DISCORD_TOKEN=SEU_TOKEN_AQUI
+        TMDB_API_KEY=SUA_CHAVE_AQUI
+        ```
+4.  **Configure o Banco de Dados (Primeira vez):**
+    ```bash
+    node database/setup.js
     ```
-    # Exemplo de .env
-    DISCORD_TOKEN=SEU_TOKEN_DO_BOT_DISCORD_AQUI
-    TMDB_API_KEY=SUA_CHAVE_DE_API_TMDB_AQUI
-    ```
-    **Lembre-se: O arquivo `.env` nunca deve ser compartilhado ou comitado no Git!**
-
-4.  **Registre seu Bot no Discord:**
-    * Vá para o [Portal do Desenvolvedor do Discord](https://discord.com/developers/applications).
-    * Crie uma nova aplicação, dê um nome ao seu bot.
-    * Vá em `Bot` > `Add Bot` e `Reset Token` para obter seu `DISCORD_TOKEN`.
-    * Ative os `Privileged Gateway Intents` necessários (MESSAGE CONTENT INTENT, PRESENCE INTENT, SERVER MEMBERS INTENT, se for usar).
-    * Convide o bot para o seu servidor.
-
-5.  **Registre os Comandos de Barra (`Slash Commands`):**
-    Para que seus comandos apareçam no Discord, você precisa registrá-los.
+5.  **Registre os Comandos:**
     ```bash
     node deploy-commands.js
     ```
-
-6.  **Execute o Bot:**
+6.  **Inicie o Bot:**
     ```bash
-    node index.js # Ou o nome do seu arquivo principal do bot
+    node index.js
     ```
-    Seu bot deverá ficar online no Discord!
-
-## ✨ Funcionalidades Atuais
-
-Aqui estão os comandos que o bot oferece atualmente:
-
-* **`/link [username]` (e `/unlink`):**
-    * Permite aos usuários vincular (ou desvincular) suas contas do Discord a um nome de usuário do Letterboxd. Essencial para que o bot possa acessar dados públicos do perfil.
-    * *Melhoria futura:* O bot verificará a existência do usuário Letterboxd antes de vincular.
-* **`/diary [usuario] [dia] [mes] [ano]`:**
-    * Exibe os filmes que um usuário assistiu em um dia específico no Letterboxd. Por padrão, mostra os filmes da data atual, mas aceita dia, mês e ano como parâmetros.
-* **`/review [usuario] [filme]`:**
-    * Mostra a última review de um usuário ou permite buscar reviews por título de filme. Consegue navegar por múltiplas páginas de reviews no Letterboxd.
-* **`/favorites [usuario]`:**
-    * Exibe os 4 filmes favoritos de um usuário do Letterboxd. Coleta os slugs dos filmes, busca detalhes precisos (título, ano) na página de cada filme, e obtém os pôsteres do TMDB. A resposta é dividida em um embed (lista de filmes) e uma imagem separada (grade de pôsteres).
-* **`/likesgrid [usuario]`:**
-    * Gera uma grade personalizável de pôsteres com base nos filmes que um usuário curtiu no Letterboxd. Oferece um menu interativo para escolher o tamanho da grade (ex: 2x2, 3x3, 5x5).
-* **`/profile [usuario]`:**
-    * Mostra estatísticas gerais do perfil Letterboxd de um usuário, incluindo filmes assistidos (total e este ano), seguidores, seguindo, watchlist e tags usadas.
-
-## 🔮 Funcionalidades Futuras (Planejamento)
-
-Estamos sempre trabalhando para melhorar o bot e adicionar novas capacidades! Aqui estão algumas das próximas features planejadas:
-
-1.  **`/film` (Pesquisar Filme Letterboxd):**
-    * **Objetivo:** Permitir a busca de qualquer filme na base de dados do Letterboxd.
-    * **Detalhes:** Aceita um título, apresenta menu de seleção para múltiplos resultados e exibe sinopse, nota (TMDB), pôster, gêneros e link para o Letterboxd.
-
-2.  **`/watchedfilm` (Filme Visto Pelo Usuário):**
-    * **Objetivo:** Verificar se um usuário já assistiu a um filme específico ou se está em sua watchlist.
-    * **Detalhes:** Utiliza a busca de filmes e verifica o diário completo do usuário e/ou sua watchlist, exibindo a data de log e nota se assistido.
-
-3.  **`/director` (Filmes por Diretor):**
-    * **Objetivo:** Pesquisar filmes dirigidos por um diretor específico.
-    * **Detalhes:** Busca filmes no Letterboxd/TMDB por diretor e exibe uma lista em embed, com a foto do diretor.
-
-4.  **`/compare` (Comparar Usuários):**
-    * **Objetivo:** Encontrar filmes em comum entre dois usuários do Letterboxd.
-    * **Detalhes:** Compara os diários completos de dois usuários e lista os filmes que ambos assistiram, mostrando detalhes como notas e datas.
-
-5.  **`/top` (Ranking de Mais Assistidos no Servidor):**
-    * **Objetivo:** Exibir um ranking dos filmes mais assistidos pelos usuários vinculados no servidor.
-    * **Detalhes:** Esta é uma feature mais complexa, que idealmente exigiria um banco de dados para armazenar e agregar os dados de filmes assistidos dos usuários para garantir desempenho e precisão.
 
 ## 🤝 Como Contribuir
 
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues para bugs ou sugestões, ou enviar Pull Requests.
+Contribuições são bem-vindas! Sinta-se à vontade para abrir *issues* para reportar bugs ou sugerir melhorias, ou enviar *Pull Requests* com novas funcionalidades.
+
+*Este projeto utiliza web scraping como principal fonte de dados do Letterboxd devido à falta de uma API pública de fácil acesso.*
