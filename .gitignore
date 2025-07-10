@@ -1,3 +1,8 @@
 node_modules/
+storage/
+database/
 
+npm-debug.log*
+.DS_Store
+test_*.js
 .env

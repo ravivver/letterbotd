@@ -1,4 +1,4 @@
-// scraper/getFullDiary.js (Versão que coleta o ano do filme)
+// scraper/getFullDiary.js (Versão Definitiva com Ano Corrigido)
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
@@ -32,10 +32,9 @@ export async function getFullDiary(username) {
         const title = filmDiv.find('img').attr('alt');
         const date = row.attr('data-viewing-date');
 
-        // --- ALTERAÇÃO AQUI: Extraindo o ano ---
-        const titleLink = row.find('h2.headline-4 a');
-        const yearMatch = titleLink.text().match(/\((\d{4})\)$/);
-        const year = yearMatch ? yearMatch[1] : null;
+        // --- CORREÇÃO FINAL AQUI ---
+        // Buscando o ano no local correto que você encontrou: <span class="releasedate"><a>ANO</a></span>
+        const year = row.find('.releasedate a').text().trim();
 
         const ratingSpan = row.find('td.td-rating span.rating');
         let rating = null;
@@ -48,8 +47,7 @@ export async function getFullDiary(username) {
         }
 
         if (slug) {
-          // Adicionando o ano ao objeto que salvamos
-          allDiaryEntries.push({ slug, title, year, rating, date });
+          allDiaryEntries.push({ slug, title, year: year || null, rating, date });
         }
       });
       
