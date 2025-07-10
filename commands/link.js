@@ -1,9 +1,10 @@
 // commands/link.js
 
-import { SlashCommandBuilder, MessageFlags } from 'discord.js'; // Adicionado MessageFlags
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises'; 
 import path from 'node:path';
-import { fileURLToPath } from 'node:url'; // Corrigido ' = ' para ' from '
+import { fileURLToPath } from 'node:url';
+import { checkUserExists } from '../scraper/checkUserExists.js'; // NOVO: Importa a função de verificação
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,11 +20,23 @@ export const data = new SlashCommandBuilder()
             .setRequired(true));
 
 export async function execute(interaction) {
-    // Deferral efêmero, pois a resposta final é sempre efêmera.
     await interaction.deferReply({ flags: MessageFlags.Ephemeral }); 
 
-    const letterboxdUsername = interaction.options.getString('username');
+    const letterboxdUsername = interaction.options.getString('username').trim(); // ALTERADO: Adicionado .trim()
     const discordId = interaction.user.id;
+
+    // --- NOVA ETAPA DE VERIFICAÇÃO ---
+    const verification = await checkUserExists(letterboxdUsername);
+
+    if (verification.status !== 'SUCCESS') {
+      // Se o usuário não for encontrado, o perfil for privado, ou ocorrer um erro, avisa e encerra.
+      await interaction.editReply({ 
+        content: `Não foi possível vincular: ${verification.message}`,
+        flags: MessageFlags.Ephemeral
+      });
+      return; 
+    }
+    // --- FIM DA VERIFICAÇÃO ---
 
     try {
         let users = {};
@@ -37,7 +50,7 @@ export async function execute(interaction) {
                 console.error(`Erro ao ler users.json: ${readError.message}`);
                 await interaction.editReply({
                     content: 'Ocorreu um erro interno ao tentar ler os vínculos de usuário. Por favor, tente novamente mais tarde.',
-                    flags: MessageFlags.Ephemeral // EFÊMERO
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -48,15 +61,15 @@ export async function execute(interaction) {
         await fs.writeFile(usersFilePath, JSON.stringify(users, null, 4), 'utf8');
 
         await interaction.editReply({
-            content: `Seu ID do Discord foi vinculado ao usuário do Letterboxd: \`${letterboxdUsername}\`.`,
-            flags: MessageFlags.Ephemeral // EFÊMERO
+            content: `Sua conta do Discord foi vinculada com sucesso ao perfil do Letterboxd: \`${letterboxdUsername}\`.`,
+            flags: MessageFlags.Ephemeral
         });
 
     } catch (error) {
         console.error(`Erro ao vincular usuário ${discordId} com ${letterboxdUsername}:`, error);
         await interaction.editReply({
             content: `Ocorreu um erro ao vincular sua conta Letterboxd. Detalhes: ${error.message}`,
-            flags: MessageFlags.Ephemeral // EFÊMERO
+            flags: MessageFlags.Ephemeral
         });
     }
 }

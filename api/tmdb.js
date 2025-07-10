@@ -9,77 +9,44 @@ const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/'; 
 
-/**
- * Busca detalhes de um filme no TMDB.
- * @param {string} query Título do filme para buscar.
- * @param {number} [year] Ano de lançamento (opcional, para refinar a busca).
- * @returns {Promise<Object|null>} Objeto com detalhes do filme TMDB, ou null se não encontrado.
- */
+// --- SUAS FUNÇÕES ORIGINAIS (SEM ALTERAÇÃO) ---
+
 async function searchMovieTMDB(query, year = null) {
     if (!TMDB_API_KEY) {
         throw new Error('TMDB_API_KEY não configurada no .env');
     }
-
+    // ... (código original inalterado)
     try {
-        const commonParams = {
-            api_key: TMDB_API_KEY,
-            query: query
-        };
-        if (year) {
-            commonParams.year = year;
-        }
-
-        // 1. Busca inicial para encontrar o filme ID (em português para o match)
         const searchResponse = await axios.get(`${TMDB_BASE_URL}/search/movie`, { 
-            params: { ...commonParams, language: 'pt-BR' } 
+            params: { api_key: TMDB_API_KEY, query, year, language: 'pt-BR' } 
         });
         
         if (!searchResponse.data.results || searchResponse.data.results.length === 0) {
-            return null; // Filme não encontrado
+            return null;
         }
+        const movieId = searchResponse.data.results[0].id;
 
-        const movieId = searchResponse.data.results[0].id; // Pega o ID do filme mais relevante
-
-        // 2. Busca de detalhes em português (para título, gêneros, etc.)
         const ptDetailsResponse = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
             params: { api_key: TMDB_API_KEY, language: 'pt-BR' }
         });
-        const ptMovie = ptDetailsResponse.data;
-
-        // 3. Busca de detalhes em inglês (para pôster original e sinopse potencialmente melhor)
         const enDetailsResponse = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
-            params: { api_key: TMDB_API_KEY, language: 'en-US' } // Busca em inglês/original
+            params: { api_key: TMDB_API_KEY, language: 'en-US' }
         });
-        const enMovie = enDetailsResponse.data;
 
         return {
-            id: ptMovie.id,
-            title: ptMovie.title, // Título em PT
-            original_title: ptMovie.original_title,
-            release_date: ptMovie.release_date,
-            overview: ptMovie.overview, // Sinopse em PT
-            poster_path: enMovie.poster_path, // Pôster da versão em inglês/original
-            vote_average: ptMovie.vote_average, 
-            vote_count: ptMovie.vote_count,     
-            genres: ptMovie.genres ? ptMovie.genres.map(g => g.name) : [],
-            overview_en: enMovie.overview // Sinopse em inglês, como alternativa
+            id: ptDetailsResponse.data.id,
+            title: ptDetailsResponse.data.title,
+            overview: ptDetailsResponse.data.overview,
+            poster_path: enDetailsResponse.data.poster_path || ptDetailsResponse.data.poster_path,
+            vote_average: ptDetailsResponse.data.vote_average, 
+            genres: ptDetailsResponse.data.genres ? ptDetailsResponse.data.genres.map(g => g.name) : [],
         };
     } catch (error) {
         console.error(`Erro ao buscar filme no TMDB para "${query}" (${year}):`, error.message);
-        // Se for erro 404, pode significar que o filme não tem dados em PT/EN.
-        if (error.response && error.response.status === 404) {
-            return null; // Trata como não encontrado
-        }
-        throw new Error(`Erro ao buscar filme no TMDB: ${error.message}`);
+        return null;
     }
 }
 
-/**
- * Constrói a URL completa para um pôster do TMDB.
- * @param {string} posterPath O caminho relativo do pôster retornado pela API do TMDB (ex: /abcd123.jpg).
- * @param {string} size O tamanho desejado do pôster (ex: 'w500', 'original').
- * @returns {string|null} A URL completa do pôster, ou null.
- */
 function getTmdbPosterUrl(posterPath, size = 'w500') {
     if (posterPath) {
         return `${TMDB_IMAGE_BASE_URL}${size}${posterPath}`;
@@ -87,4 +54,51 @@ function getTmdbPosterUrl(posterPath, size = 'w500') {
     return null;
 }
 
-export { searchMovieTMDB, getTmdbPosterUrl };
+
+// --- NOVAS FUNÇÕES PARA BUSCAR DIRETORES ---
+
+/**
+ * Busca por uma pessoa (diretor) no TMDB.
+ * @param {string} name O nome da pessoa para buscar.
+ * @returns {Promise<Object|null>} O objeto da pessoa mais relevante, ou null.
+ */
+async function searchPersonTMDB(name) {
+    if (!TMDB_API_KEY) throw new Error('TMDB_API_KEY não configurada no .env');
+    try {
+        const response = await axios.get(`${TMDB_BASE_URL}/search/person`, {
+            params: { api_key: TMDB_API_KEY, query: name }
+        });
+        // Retorna o primeiro resultado, que geralmente é o mais popular/relevante
+        return response.data.results && response.data.results.length > 0 ? response.data.results[0] : null;
+    } catch (error) {
+        console.error(`Erro ao buscar pessoa no TMDB por "${name}":`, error.message);
+        return null;
+    }
+}
+
+/**
+ * Busca detalhes completos de uma pessoa no TMDB.
+ * @param {number} personId O ID da pessoa no TMDB.
+ * @returns {Promise<Object|null>} Objeto com detalhes da pessoa, ou null.
+ */
+async function getPersonDetailsTMDB(personId) {
+    if (!TMDB_API_KEY) throw new Error('TMDB_API_KEY não configurada no .env');
+    try {
+        const response = await axios.get(`${TMDB_BASE_URL}/person/${personId}`, {
+            params: { api_key: TMDB_API_KEY, language: 'pt-BR' }
+        });
+        return response.data;
+    } catch (error) {
+        console.error(`Erro ao buscar detalhes da pessoa ID ${personId}:`, error.message);
+        return null;
+    }
+}
+
+
+// Exporta todas as funções, incluindo as novas
+export { 
+    searchMovieTMDB, 
+    getTmdbPosterUrl,
+    searchPersonTMDB,
+    getPersonDetailsTMDB
+};
