@@ -15,8 +15,8 @@ async function searchMovieTMDB(query, year = null) {
     }
 
     try {
-        const searchResponse = await axios.get(`${TMDB_BASE_URL}/search/movie`, { 
-            params: { api_key: TMDB_API_KEY, query, year, language: 'pt-BR' } 
+        const searchResponse = await axios.get(`${TMDB_BASE_URL}/search/movie`, {
+            params: { api_key: TMDB_API_KEY, query, year, language: 'pt-BR' }
         });
         
         if (!searchResponse.data.results || searchResponse.data.results.length === 0) {
@@ -24,27 +24,30 @@ async function searchMovieTMDB(query, year = null) {
         }
         const movieId = searchResponse.data.results[0].id;
 
-        // ALTERAÇÃO: Adicionado 'append_to_response=credits' para buscar os créditos juntos
-        const detailsResponse = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
-            params: { 
-                api_key: TMDB_API_KEY, 
-                language: 'pt-BR',
-                append_to_response: 'credits' 
-            }
-        });
-        const movie = detailsResponse.data;
+        // Fazemos as duas chamadas em paralelo para otimizar
+        const [ptDetailsResponse, enDetailsResponse] = await Promise.all([
+            axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
+                params: { api_key: TMDB_API_KEY, language: 'pt-BR', append_to_response: 'credits' }
+            }),
+            axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
+                params: { api_key: TMDB_API_KEY, language: 'en-US' }
+            })
+        ]);
 
-        // Filtrar a equipe para encontrar o diretor
-        const directors = movie.credits.crew.filter(member => member.job === 'Director').map(member => member.name);
+        const ptMovie = ptDetailsResponse.data;
+        const enMovie = enDetailsResponse.data;
+        
+        const directors = ptMovie.credits.crew.filter(member => member.job === 'Director').map(member => member.name);
 
         return {
-            id: movie.id,
-            title: movie.title,
-            overview: movie.overview,
-            poster_path: movie.poster_path, // O poster da versão em PT-BR geralmente é bom
-            vote_average: movie.vote_average, 
-            genres: movie.genres ? movie.genres.map(g => g.name) : [],
-            directors: directors || [], // Adicionamos a nova propriedade de diretores
+            id: ptMovie.id,
+            title: ptMovie.title,
+            overview: ptMovie.overview,
+            // Prioriza o pôster em inglês/original, se não houver, usa o em português
+            poster_path: enMovie.poster_path || ptMovie.poster_path, 
+            vote_average: ptMovie.vote_average, 
+            genres: ptMovie.genres ? ptMovie.genres.map(g => g.name) : [],
+            directors: directors || [],
         };
     } catch (error) {
         console.error(`Erro ao buscar filme no TMDB para "${query}" (${year}):`, error.message);

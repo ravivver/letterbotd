@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 const usersFilePath = path.join(__dirname, '..', 'storage', 'users.json');
 
 export const data = new SlashCommandBuilder()
-    .setName('checkfilm')
+    .setName('check')
     .setDescription('Verifica se um usuário já assistiu a um filme específico.')
     .addUserOption(option => option.setName('user').setDescription('O usuário a ser verificado.').setRequired(true))
     .addStringOption(option => option.setName('film').setDescription('O título do filme que você deseja verificar.').setRequired(true));

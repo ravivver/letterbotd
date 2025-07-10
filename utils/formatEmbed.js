@@ -51,12 +51,8 @@ function convertRatingToStars(rating) {
     if (halfStar) {
         stars += '½';
     }
-
-    const totalStarsDisplayed = fullStars + (halfStar ? 1 : 0);
-    for (let i = totalStarsDisplayed; i < 5; i++) {
-        stars += '½';
-    }
-
+    
+    // Removido o preenchimento com estrelas vazias para um visual mais limpo.
     return stars;
 }
 
@@ -208,136 +204,17 @@ async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
     let attachment = null;
     let imageFailureMessage = '';
 
+    // --- ALTERAÇÃO AQUI: Adicionando o hyperlink ---
+    // Usamos o film.slug para criar o link para cada filme.
     const filmListDescription = favoriteFilms.map((film, index) =>
-        `${index + 1}. **${film.title}** (${film.year})`
+        `${index + 1}. **[${film.title} (${film.year})](https://letterboxd.com/film/${film.slug}/)**`
     ).join('\n');
     embed.setDescription(filmListDescription);
 
-    console.log('Debug: Filmes favoritos recebidos para embed:', favoriteFilms.map(f => `${f.title} (${f.year}) - Slug: ${f.slug}`));
-
+    // O resto da função para gerar a imagem da grade continua o mesmo
     const posterUrls = favoriteFilms.map(film =>
         film.tmdbDetails?.poster_path ? getTmdbPosterUrl(film.tmdbDetails.poster_path, 'w342') : null
     ).filter(url => url !== null);
-
-    console.log('Debug: URLs de pôster geradas:', posterUrls);
-
-    if (posterUrls.length > 0) {
-        const posterBuffers = await Promise.all(
-            posterUrls.map(async url => {
-                try {
-                    console.log(`Debug: Baixando pôster de: ${url}`);
-                    const response = await axios.get(url, { responseType: 'arraybuffer' });
-                    console.log(`Debug: Pôster baixado com sucesso: ${url}`);
-                    return response.data;
-                } catch (error) {
-                    console.error(`Erro CRÍTICO ao baixar pôster de ${url}:`, error.message);
-                    return sharp({
-                        create: {
-                            width: 342,
-                            height: 513,
-                            channels: 4,
-                            background: { r: 100, g: 100, b: 100, alpha: 1 }
-                        }
-                    })
-                    .png()
-                    .toBuffer();
-                }
-            })
-        );
-
-        const posterWidth = 342;
-        const posterHeight = 513;
-        const gap = 10;
-
-        const numCols = Math.min(posterUrls.length, 2);
-        const numRows = Math.ceil(posterUrls.length / 2);
-
-        const outputWidth = numCols * posterWidth + (numCols - 1) * gap;
-        const outputHeight = numRows * posterHeight + (numRows - 1) * gap;
-
-
-        const compositeImages = [];
-        for (let i = 0; i < posterBuffers.length; i++) {
-            const row = Math.floor(i / 2);
-            const col = i % 2;
-            compositeImages.push({
-                input: posterBuffers[i],
-                left: col * (posterWidth + gap),
-                top: row * (posterHeight + gap)
-            });
-        }
-
-        try {
-            const combinedImageBuffer = await sharp({
-                create: {
-                    width: outputWidth,
-                    height: outputHeight,
-                    channels: 4,
-                    background: { r: 0, g: 0, b: 0, alpha: 0 }
-                }
-            })
-            .composite(compositeImages)
-            .png()
-            .toBuffer();
-
-            attachment = new AttachmentBuilder(combinedImageBuffer, { name: 'favorites_grid.png' });
-            console.log('Debug: Imagem da grade composta com sucesso!');
-            console.log(`Debug: embed.data.image após processamento: ${embed.data.image ? JSON.stringify(embed.data.image) : 'NÃO DEFINIDO'}`);
-
-        } catch (sharpError) {
-            console.error('Erro ao compor a imagem com sharp:', sharpError.message);
-            imageFailureMessage = 'Houve um erro ao gerar a imagem da grade de pôsteres.';
-            attachment = null;
-        }
-    } else {
-        imageFailureMessage = 'Não foi possível obter as URLs dos pôsteres dos filmes favoritos do TMDB.';
-        console.log('Debug: posterUrls.length é 0, não há URLs para baixar.');
-    }
-
-    if (imageFailureMessage) {
-        embed.setDescription((embed.description || '') + `\n\n${imageFailureMessage}`);
-    }
-
-    embed.setFooter(null);
-
-    return { embed, attachment };
-}
-
-/**
- * Cria um embed com uma grade XxY de pôsteres de filmes curtidos.
- * Esta função é adaptada da createFavoritesEmbed para permitir colunas e linhas dinâmicas.
- * @param {Array<Object>} films Array de objetos de filmes com title, year, posterUrl (TMDB).
- * @param {string} username Nome de usuário do Letterboxd.
- * @param {number} cols Número de colunas da grade.
- * @param {number} rows Número de linhas da grade.
- * @returns {Promise<Object>} Um objeto contendo o EmbedBuilder e o AttachmentBuilder (a imagem).
- */
-async function createLikesGridImage(films, username, cols, rows) {
-    const embed = new EmbedBuilder()
-        .setColor(0x00BFFF) // Cor azul claro para Likes Grid
-        .setTitle(`Grade de Filmes Curtidos de ${username} (${cols}x${rows}) ❤️`);
-
-    let attachment = null;
-    let imageFailureMessage = '';
-
-    const filmListDescription = films.map((film, index) =>
-        `${index + 1}. **${film.title}** (${film.year || 'Ano Desconhecido'})`
-    ).join('\n');
-    embed.setDescription(filmListDescription);
-
-    const posterUrls = films.map(film =>
-        film.posterUrl ? film.posterUrl : null
-    ).filter(url => url !== null);
-
-    const requiredPosters = cols * rows;
-    if (posterUrls.length < requiredPosters) {
-        imageFailureMessage = `Não foi possível obter pôsteres suficientes (${posterUrls.length}/${requiredPosters}) para a grade ${cols}x${rows}.`;
-        console.warn(`[Embed - LikesGrid] ${imageFailureMessage}`);
-        while (posterUrls.length < requiredPosters) {
-            posterUrls.push('https://via.placeholder.com/342x513?text=Poster+Faltando');
-        }
-    }
-
 
     if (posterUrls.length > 0) {
         const posterBuffers = await Promise.all(
@@ -347,16 +224,7 @@ async function createLikesGridImage(films, username, cols, rows) {
                     return response.data;
                 } catch (error) {
                     console.error(`Erro ao baixar pôster de ${url}:`, error.message);
-                    return sharp({
-                        create: {
-                            width: 342,
-                            height: 513,
-                            channels: 4,
-                            background: { r: 50, g: 50, b: 50, alpha: 1 }
-                        }
-                    })
-                    .png()
-                    .toBuffer();
+                    return sharp({ create: { width: 342, height: 513, channels: 4, background: { r: 100, g: 100, b: 100, alpha: 1 } } }).png().toBuffer();
                 }
             })
         );
@@ -364,50 +232,117 @@ async function createLikesGridImage(films, username, cols, rows) {
         const posterWidth = 342;
         const posterHeight = 513;
         const gap = 10;
+        const numCols = Math.min(posterUrls.length, 2);
+        const numRows = Math.ceil(posterUrls.length / 2);
+        const outputWidth = numCols * posterWidth + (numCols - 1) * gap;
+        const outputHeight = numRows * posterHeight + (numRows - 1) * gap;
 
-        const outputWidth = cols * posterWidth + (cols - 1) * gap;
-        const outputHeight = rows * posterHeight + (rows - 1) * gap;
-
-        const compositeImages = [];
-        for (let i = 0; i < posterBuffers.length; i++) {
-            const row = Math.floor(i / cols);
-            const col = i % cols;
-            compositeImages.push({
-                input: posterBuffers[i],
-                left: col * (posterWidth + gap),
-                top: row * (posterHeight + gap)
-            });
-        }
+        const compositeImages = posterBuffers.map((buffer, i) => ({
+            input: buffer,
+            left: (i % 2) * (posterWidth + gap),
+            top: Math.floor(i / 2) * (posterHeight + gap)
+        }));
 
         try {
-            const combinedImageBuffer = await sharp({
-                create: {
-                    width: outputWidth,
-                    height: outputHeight,
-                    channels: 4,
-                    background: { r: 0, g: 0, b: 0, alpha: 0 }
-                }
-            })
-            .composite(compositeImages)
-            .png()
-            .toBuffer();
-
-            attachment = new AttachmentBuilder(combinedImageBuffer, { name: `likes_grid_${cols}x${rows}.png` });
-
+            const combinedImageBuffer = await sharp({ create: { width: outputWidth, height: outputHeight, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+                .composite(compositeImages).png().toBuffer();
+            attachment = new AttachmentBuilder(combinedImageBuffer, { name: 'favorites_grid.png' });
         } catch (sharpError) {
-            console.error('Erro ao compor a imagem da grade com sharp:', sharpError.message);
+            console.error('Erro ao compor a imagem com sharp:', sharpError.message);
             imageFailureMessage = 'Houve um erro ao gerar a imagem da grade de pôsteres.';
             attachment = null;
         }
     } else {
-        imageFailureMessage = 'Não foi possível obter URLs de pôsteres para os filmes.';
+        imageFailureMessage = 'Não foi possível obter os pôsteres dos filmes favoritos.';
     }
 
     if (imageFailureMessage) {
         embed.setDescription((embed.description || '') + `\n\n${imageFailureMessage}`);
     }
 
-    embed.setFooter(null);
+    return { embed, attachment };
+}
+
+
+// --- VERSÃO FINAL DA FUNÇÃO createLikesGridImage ---
+/**
+ * Cria um embed e uma imagem de grade para os filmes curtidos.
+ * Suporta hyperlinks e grades incompletas com fundo transparente.
+ */
+async function createLikesGridImage(films, username, cols, rows) {
+    const embed = new EmbedBuilder()
+        .setColor(0x00BFFF)
+        .setTitle(`❤️ Grade de Filmes Curtidos de ${username}`);
+
+    let attachment = null;
+    const requiredFilms = cols * rows;
+
+    // LÓGICA DE HYPERLINKS
+    const filmListDescription = films
+        .map((film, index) => `${index + 1}. **[${film.title} (${film.year || '????'})](https://letterboxd.com/film/${film.slug}/)**`)
+        .join('\n');
+    embed.setDescription(filmListDescription);
+
+    const posterUrls = films.map(film => film.posterUrl);
+
+    // Preenche a lista com 'null' para os espaços que ficarão vazios
+    while (posterUrls.length < requiredFilms) {
+        posterUrls.push(null);
+    }
+    
+    // Baixa os pôsteres. Se falhar ou for null, o resultado será null.
+    const posterBuffers = await Promise.all(
+        posterUrls.map(async (url) => {
+            if (!url) return null; // Para espaços vazios intencionais
+            try {
+                const response = await axios.get(url, { responseType: 'arraybuffer' });
+                return response.data;
+            } catch (error) {
+                console.error(`Erro ao baixar pôster de ${url}:`, error.message);
+                return null; // Trata erro de download como um espaço vazio também
+            }
+        })
+    );
+
+    const posterWidth = 150;
+    const posterHeight = 225;
+    const gap = 10;
+    const outputWidth = cols * posterWidth + (cols - 1) * gap;
+    const outputHeight = rows * posterHeight + (rows - 1) * gap;
+
+    const resizedPosterBuffers = await Promise.all(
+        posterBuffers.map(buffer => buffer ? sharp(buffer).resize(posterWidth, posterHeight).toBuffer() : null)
+    );
+    
+    const compositeImages = resizedPosterBuffers
+        .map((buffer, i) => {
+            if (!buffer) return null;
+            return {
+                input: buffer,
+                left: Math.floor(i % cols) * (posterWidth + gap),
+                top: Math.floor(i / cols) * (posterHeight + gap)
+            };
+        })
+        .filter(item => item !== null); // Remove os nulos para não tentar compor um espaço vazio
+
+    try {
+        const combinedImageBuffer = await sharp({
+            create: {
+                width: outputWidth,
+                height: outputHeight,
+                channels: 4,
+                // FUNDO TOTALMENTE TRANSPARENTE
+                background: { r: 0, g: 0, b: 0, alpha: 0 } 
+            }
+        })
+        .composite(compositeImages)
+        .png()
+        .toBuffer();
+        attachment = new AttachmentBuilder(combinedImageBuffer, { name: `grid_${cols}x${rows}.png` });
+    } catch (sharpError) {
+        console.error('Erro ao compor a imagem da grade com sharp:', sharpError.message);
+        embed.setFooter({ text: 'Houve um erro ao gerar a imagem da grade.' });
+    }
 
     return { embed, attachment };
 }
