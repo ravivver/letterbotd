@@ -1,8 +1,6 @@
-// commands/sync.js
-
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { getFullDiary } from '../scraper/getFullDiary.js';
-import { saveDiaryEntries } from '../database/db.js';
+import { saveDiaryEntries, checkIfEntryExists } from '../database/db.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,44 +20,69 @@ export async function execute(interaction) {
     try {
         usersData = JSON.parse(await fs.readFile(usersFilePath, 'utf8'));
     } catch (error) {
-        return interaction.reply({ content: 'Erro ao ler o arquivo de usuários.', flags: [MessageFlags.Ephemeral] });
+        usersData = {};
     }
 
-    const userEntry = usersData[user.id];
-    let letterboxdUsername;
-    if (typeof userEntry === 'string') letterboxdUsername = userEntry;
-    else if (typeof userEntry === 'object' && userEntry !== null) letterboxdUsername = userEntry.letterboxd;
+    let userEntry = usersData[user.id];
+    if (!userEntry) {
+        userEntry = { letterboxd: null }; 
+        usersData[user.id] = userEntry;
+    } else if (typeof userEntry === 'string') {
+        userEntry = { letterboxd: userEntry }; 
+        usersData[user.id] = userEntry;
+    }
+
+    const letterboxdUsername = userEntry.letterboxd;
 
     if (!letterboxdUsername) {
         return interaction.reply({ content: 'Você precisa vincular sua conta com /link antes de sincronizar.', flags: [MessageFlags.Ephemeral] });
     }
 
-    // A sincronização é um processo demorado, então a resposta é efêmera.
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
     try {
-        await interaction.editReply('Iniciando sincronização... Estou lendo todo o seu diário do Letterboxd. Isso pode levar vários minutos!');
+        console.log(`[Sync Command] Iniciando sincronização completa para ${user.id}...`);
+
+        await interaction.editReply('Iniciando sincronização completa... Estou lendo todo o seu diário do Letterboxd. Isso pode levar vários minutos!');
         
-        // Pega todas as entradas do diário
         const diaryEntries = await getFullDiary(letterboxdUsername);
 
         if (!diaryEntries || diaryEntries.length === 0) {
-            return interaction.editReply('Seu diário do Letterboxd parece estar vazio. Nada para sincronizar.');
+            await interaction.editReply('Seu diário do Letterboxd parece estar vazio. Nada para sincronizar.');
+            return;
         }
 
-        // Adiciona os dados do Discord e Letterboxd a cada entrada para salvar no DB
-        const entriesToSave = diaryEntries.map(entry => ({
-            ...entry,
-            discord_id: user.id,
-            letterboxd_username: letterboxdUsername,
-        }));
+        const entriesToSave = [];
+        let skippedEntriesCount = 0;
+        let newEntriesFound = 0;
 
-        await interaction.editReply(`Encontrei ${entriesToSave.length} entradas no seu diário. Salvando no banco de dados...`);
+        // Filtra as entradas, verificando se já existem no banco de dados usando o viewing_id
+        for (const entry of diaryEntries) {
+            // Agora passamos o viewing_id para a verificação
+            const exists = await checkIfEntryExists(user.id, letterboxdUsername, entry.viewing_id); 
+            if (!exists) {
+                entriesToSave.push({
+                    ...entry,
+                    discord_id: user.id,
+                    letterboxd_username: letterboxdUsername,
+                });
+                newEntriesFound++;
+            } else {
+                skippedEntriesCount++;
+                console.log(`[Sync Command Debug] Entrada já existe no DB (viewing_id: ${entry.viewing_id}), pulando: ${entry.title} (${entry.date})`); 
+            }
+        }
 
-        // Salva tudo no banco de dados
-        await saveDiaryEntries(entriesToSave);
+        if (entriesToSave.length === 0) {
+            await interaction.editReply(`Nenhuma nova entrada encontrada para adicionar ao banco de dados. ${skippedEntriesCount} entradas já existentes foram puladas.`);
+            return;
+        }
+
+        await interaction.editReply(`Encontrei ${newEntriesFound} novas entradas no seu diário. Salvando no banco de dados...`);
+
+        const { changes } = await saveDiaryEntries(entriesToSave);
         
-        await interaction.editReply(`Sincronização concluída! ${entriesToSave.length} entradas do seu diário foram processadas.`);
+        await interaction.editReply(`Sincronização concluída! ${changes} novas entradas foram adicionadas ao banco de dados. (${skippedEntriesCount} entradas já existentes foram puladas).`);
 
     } catch (error) {
         console.error('Erro durante o /sync:', error);
