@@ -1,88 +1,93 @@
 # 🎬 Letterboxd Discord Bot
 
-Um bot completo para Discord desenvolvido em Node.js que integra funcionalidades da plataforma Letterboxd diretamente nos seus servidores!
+A full-featured Discord bot developed in Node.js that integrates Letterboxd functionalities directly into your servers!
 
-Este bot permite que os usuários vinculem seus perfis do Letterboxd e compartilhem suas atividades, estatísticas, reviews, filmes favoritos e até comparem seus gostos com outros membros do servidor.
+This bot allows users to link their Letterboxd profiles and share their activity, stats, reviews, favorite films, and even compare their taste with other server members.
 
-## ⚠️ Considerações Técnicas
+## ⚠️ Technical Considerations
 
-Este projeto utiliza **web scraping** para coletar dados da plataforma Letterboxd. Esta escolha técnica se deve ao fato de o Letterboxd **não disponibilizar uma API pública** de fácil acesso. Para utilizar a API oficial, é necessário submeter uma aplicação formal e ser aprovado, o que pode ser um processo demorado e desafiador para projetos de estudo e desenvolvimento em pequena escala.
+This project uses **web scraping** to collect data from the Letterboxd platform. This technical choice is due to the fact that Letterboxd **does not provide an easily accessible public API**. To use the official API, you must submit a formal application and be approved, which can be a lengthy and challenging process for study projects and small-scale development.
 
-Optar pelo web scraping permite a flexibilidade de extrair as informações necessárias diretamente das páginas HTML visíveis, possibilitando o desenvolvimento das funcionalidades desejadas, embora exija manutenção caso a estrutura do site do Letterboxd sofra alterações.
+Using web scraping offers the flexibility to extract necessary information directly from visible HTML pages, allowing the desired features to be implemented, although it may require maintenance if the structure of the Letterboxd site changes.
 
-## ✨ Funcionalidades Principais
+## ✨ Main Features
 
-* **Busca Completa:** Pesquise filmes e diretores com o comando `/search`.
-* **Interação com Perfil:** Veja estatísticas, favoritos, diário e reviews com os comandos `/profile`, `/favorites`, `/diary` e `/review`.
-* **Análise de Atividade:** Verifique se um filme já foi assistido por alguém com `/checkfilm`.
-* **Features Sociais:** Compare os filmes em comum entre dois usuários com `/compare` e receba sugestões da watchlist com `/hint`.
-* **Ranking do Servidor:** Descubra os filmes mais populares do servidor com o comando `/top`!
-* **Geração de Imagens:** Crie grades de pôsteres personalizadas com os comandos `/favorites` e `/likesgrid`.
+- **Comprehensive Search:** Search for movies and directors with the `/search` command.
+- **Profile Interaction:** View stats, favorites, diary entries, and reviews with the `/profile`, `/favorites`, `/diary`, and `/review` commands.
+- **Activity Analysis:** Check if someone has already watched a movie using `/checkfilm`.
+- **Social Features:** Compare films in common between two users with `/compare` and get random watchlist suggestions with `/hint`.
+- **Server Ranking:** Discover the most popular films on the server using `/top`!
+- **Image Generation:** Create custom poster grids using the `/favorites` and `/likesgrid` commands.
 
-## 🚀 Tecnologias Utilizadas
+## 🚀 Technologies Used
 
-* **Node.js**
-* **discord.js v14+** (Slash Commands, Buttons, Select Menus, Embeds)
-* **axios** & **cheerio** para Web Scraping dos dados do Letterboxd.
-* **API do TMDB** para enriquecimento de dados (pôsteres, sinopses, diretores).
-* **sharp** para manipulação de imagens.
-* **sqlite3** para armazenamento de dados persistentes para o ranking do servidor.
+- **Node.js**
+- **discord.js v14+** (Slash Commands, Buttons, Select Menus, Embeds)
+- **axios** & **cheerio** for web scraping Letterboxd data
+- **TMDB API** for data enrichment (posters, synopses, directors)
+- **sharp** for image processing
+- **sqlite3** for persistent data storage (server ranking)
 
-## 🤖 Comandos Disponíveis
+## 🤖 Available Commands
 
-Aqui está a lista completa de comandos:
+Here is the full list of commands:
 
-* **`/link [username]`**: Vincula sua conta Discord a um perfil Letterboxd.
-* **`/unlink`**: Desvincula sua conta.
-* **`/search film: [termo]`**: Busca por um filme ou diretor.
-* **`/check user: [user] film: [filme]`**: Verifica se um usuário já assistiu a um filme.
-* **`/profile [user]`**: Exibe as estatísticas gerais de um perfil Letterboxd.
-* **`/favorites [user]`**: Mostra os 4 filmes favoritos de um usuário em uma lista e grade.
-* **`/diary [user] [dia] [mes] [ano]`**: Mostra os filmes assistidos em uma data específica.
-* **`/review [user] [film]`**: Exibe a última review ou busca uma review específica.
-* **`/grid [user]`**: Gera uma grade de pôsteres de filmes (curtidos ou assistidos).
-* **`/compare user1: [@user] [user2: @user]`**: Compara e lista os filmes em comum entre dois usuários, com paginação.
-* **`/hint [user]`**: Sugere um filme aleatório da watchlist de um usuário.
-* **`/top`**: Exibe o top 5 filmes mais assistidos pelos membros do servidor que usaram `/sync`.
-* **`/sync`**: Sincroniza seu diário do Letterboxd para alimentar o ranking do servidor.
-* **`/last`**: Mostra o último filme assistido no Letterboxd de um usuário.
-* **`/help`**: Mostra esta lista de comandos.
+- **`/link [username]`**: Links your Discord account to a Letterboxd profile.
+- **`/unlink`**: Unlinks your account.
+- **`/search film: [term]`**: Searches for a movie or director.
+- **`/check user: [user] film: [film]`**: Checks if a user has watched a specific film.
+- **`/profile [user]`**: Displays general statistics of a Letterboxd profile.
+- **`/favorites [user]`**: Shows the 4 favorite movies of a user in a list and grid.
+- **`/diary [user] [day] [month] [year]`**: Shows the films watched on a specific date.
+- **`/review [user] [film]`**: Displays the latest or a specific review.
+- **`/grid [user]`**: Generates a movie poster grid (liked or watched).
+- **`/compare user1: [@user] [user2: @user]`**: Compares and lists common films between two users, with pagination.
+- **`/hint [user]`**: Suggests a random movie from a user’s watchlist.
+- **`/top`**: Shows the top 5 most watched movies among users who used `/sync`.
+- **`/sync`**: Syncs your Letterboxd diary to feed the server ranking.
+- **`/last`**: Shows the latest movie watched by a user on Letterboxd.
+- **`/help`**: Displays this list of commands.
 
-## 🔧 Configuração e Instalação
+## 🔧 Setup and Installation
 
-Siga os passos abaixo para rodar sua própria instância do bot.
+Follow the steps below to run your own instance of the bot.
 
-1.  **Clone o Repositório:**
+1. **Clone the Repository:**
     ```bash
-    git clone [https://github.com/ravivver/letterbotd.git](https://github.com/ravivver/letterbotd.git)
+    git clone https://github.com/ravivver/letterbotd.git
     cd letterbotd
     ```
-2.  **Instale as Dependências:**
+
+2. **Install Dependencies:**
     ```bash
     npm install
     ```
-3.  **Configure o `.env`:**
-    * Crie um arquivo `.env` na raiz do projeto.
-    * Adicione as seguintes variáveis com suas chaves:
+
+3. **Configure `.env`:**
+    - Create a `.env` file in the root directory.
+    - Add the following variables with your keys:
         ```env
-        DISCORD_TOKEN=SEU_TOKEN_AQUI
-        TMDB_API_KEY=SUA_CHAVE_AQUI
+        DISCORD_TOKEN=YOUR_TOKEN_HERE
+        TMDB_API_KEY=YOUR_KEY_HERE
         ```
-4.  **Configure o Banco de Dados (Primeira vez):**
+
+4. **Set Up the Database (First Time):**
     ```bash
     node database/setup.js
     ```
-5.  **Registre os Comandos:**
+
+5. **Register the Commands:**
     ```bash
     node deploy-commands.js
     ```
-6.  **Inicie o Bot:**
+
+6. **Start the Bot:**
     ```bash
     node index.js
     ```
 
-## 🤝 Como Contribuir
+## 🤝 Contributing
 
-Contribuições são bem-vindas! Sinta-se à vontade para abrir *issues* para reportar bugs ou sugerir melhorias, ou enviar *Pull Requests* com novas funcionalidades.
+Contributions are welcome! Feel free to open *issues* to report bugs or suggest improvements, or send *pull requests* with new features.
 
-*Este projeto utiliza web scraping como principal fonte de dados do Letterboxd devido à falta de uma API pública de fácil acesso.*
+*This project uses web scraping as its main data source from Letterboxd due to the lack of an easily accessible public API.*
