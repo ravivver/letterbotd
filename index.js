@@ -1,24 +1,24 @@
 // index.js
 
-import { Client, GatewayIntentBits, Collection, MessageFlags } from 'discord.js'; // Adicionado MessageFlags
+import { Client, GatewayIntentBits, Collection, MessageFlags } from 'discord.js';
 import dotenv from 'dotenv'; 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url'; 
-import { checkDailyWatchedFilms } from './tasks/dailyWatchedChecker.js'; // Importa a nova função
+import { checkDailyWatchedFilms } from './tasks/dailyWatchedChecker.js'; // Import the new function
 
 dotenv.config();
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 
 if (!DISCORD_BOT_TOKEN) {
-    console.error('Erro: DISCORD_BOT_TOKEN não encontrado no arquivo .env!');
+    console.error('Error: DISCORD_BOT_TOKEN not found in .env!');
     process.exit(1);
 }
 
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds,
+        GatewayIntentBits.Guilds, // Required for guild information
         GatewayIntentBits.MessageContent,
     ],
 });
@@ -38,24 +38,22 @@ for (const file of commandFiles) {
 
     if ('data' in command && 'execute' in command) {
         client.commands.set(command.data.name, command);
-        console.log(`Comando carregado: ${command.data.name}`);
+        console.log(`Command loaded: ${command.data.name}`);
     } else {
-        console.warn(`[AVISO] O comando em ${filePath} está faltando a propriedade "data" ou "execute".`);
+        console.warn(`[WARNING] The command in ${filePath} is missing "data" or "execute" property.`);
     }
 }
 
 client.once('ready', c => {
-    console.log(`Bot conectado! Logado como ${c.user.tag}`);
-    console.log(`Estou em ${client.guilds.cache.size} servidores.`);
+    console.log(`Bot connected! Logged in as ${c.user.tag}`);
+    console.log(`Bot is in ${client.guilds.cache.size} servers.`);
 
-    // Agendamento da tarefa de verificação diária
-    // A cada 20 minutos (1200000 ms)
-    // Ajuste o intervalo conforme a sua preferência e número de usuários
+    // Schedule the daily check task
     setInterval(() => {
         checkDailyWatchedFilms(client);
-    }, 20 * 60 * 1000); // 20 minutos (20 * 60 segundos * 1000 milissegundos)
+    }, 20 * 60 * 1000); // 20 minutes
 
-    // Executa uma vez ao iniciar para pegar filmes assistidos desde a última vez que o bot estava offline
+    // Run once on startup to catch films watched since the bot was last online
     checkDailyWatchedFilms(client); 
 });
 
@@ -65,7 +63,7 @@ client.on('interactionCreate', async interaction => {
     const command = client.commands.get(interaction.commandName);
 
     if (!command) {
-        console.error(`Nenhum comando correspondente encontrado para ${interaction.commandName}.`);
+        console.error(`No matching command found for ${interaction.commandName}.`);
         return;
     }
 
@@ -74,9 +72,9 @@ client.on('interactionCreate', async interaction => {
     } catch (error) {
         console.error(error);
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: 'Ocorreu um erro ao executar este comando!', flags: MessageFlags.Ephemeral });
+            await interaction.followUp({ content: 'An error occurred while executing this command!', flags: MessageFlags.Ephemeral });
         } else {
-            await interaction.reply({ content: 'Ocorreu um erro ao executar este comando!', flags: MessageFlags.Ephemeral });
+            await interaction.reply({ content: 'An error occurred while executing this command!', flags: MessageFlags.Ephemeral });
         }
     }
 });

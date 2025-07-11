@@ -1,4 +1,4 @@
-// commands/checkfilm.js (Versão Final com Fluxo Público Estável)
+// commands/check.js (Final Version with Stable Public Flow - Translated to English)
 
 import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
@@ -16,18 +16,18 @@ const usersFilePath = path.join(__dirname, '..', 'storage', 'users.json');
 
 export const data = new SlashCommandBuilder()
     .setName('check')
-    .setDescription('Verifica se um usuário já assistiu a um filme específico.')
-    .addUserOption(option => option.setName('user').setDescription('O usuário a ser verificado.').setRequired(true))
-    .addStringOption(option => option.setName('film').setDescription('O título do filme que você deseja verificar.').setRequired(true));
+    .setDescription('Checks if a user has watched a specific movie.')
+    .addUserOption(option => option.setName('user').setDescription('The user to be checked.').setRequired(true))
+    .addStringOption(option => option.setName('film').setDescription('The title of the movie you want to check.').setRequired(true));
 
 export async function execute(interaction) {
-    // Validações iniciais continuam efêmeras
+    // Initial validations remain ephemeral
     const targetDiscordUser = interaction.options.getUser('user');
     let usersData;
     try {
         usersData = JSON.parse(await fs.readFile(usersFilePath, 'utf8'));
     } catch (error) {
-        return interaction.reply({ content: 'Erro ao ler o arquivo de usuários.', flags: [MessageFlags.Ephemeral] });
+        return interaction.reply({ content: 'Error reading user file.', flags: [MessageFlags.Ephemeral] }); // Translated
     }
     const userEntry = usersData[targetDiscordUser.id];
     let letterboxdUsername;
@@ -35,10 +35,10 @@ export async function execute(interaction) {
     else if (typeof userEntry === 'object' && userEntry !== null) letterboxdUsername = userEntry.letterboxd;
 
     if (!letterboxdUsername) {
-        return interaction.reply({ content: `O usuário ${targetDiscordUser.username} não vinculou uma conta.`, flags: [MessageFlags.Ephemeral] });
+        return interaction.reply({ content: `User ${targetDiscordUser.username} has not linked an account.`, flags: [MessageFlags.Ephemeral] }); // Translated
     }
 
-    // ALTERAÇÃO PRINCIPAL: A partir daqui, a interação é pública.
+    // MAIN CHANGE: From here, the interaction is public.
     await interaction.deferReply(); 
 
     const filmQuery = interaction.options.getString('film');
@@ -46,55 +46,51 @@ export async function execute(interaction) {
     const filmResults = searchResults.filter(r => r.type === 'film');
 
     if (filmResults.length === 0) {
-        // Este erro agora será público, como parte do fluxo normal
-        return interaction.editReply({ content: `Nenhum filme encontrado para a busca "${filmQuery}".` });
+        // This error will now be public, as part of the normal flow
+        return interaction.editReply({ content: `No movies found for the search "${filmQuery}".` }); // Translated
     }
 
     if (filmResults.length > 1) {
         const filmOptions = filmResults.map(film => ({
             label: film.title.substring(0, 100),
-            description: film.year ? `Ano: ${film.year}` : 'Filme',
+            description: film.year ? `Year: ${film.year}` : 'Movie', // Translated
             value: film.slug,
         }));
-        const selectMenu = new StringSelectMenuBuilder().setCustomId('checkfilm_select').setPlaceholder('Vários filmes encontrados. Selecione um.').addOptions(filmOptions.slice(0, 25));
+        const selectMenu = new StringSelectMenuBuilder().setCustomId('checkfilm_select').setPlaceholder('Multiple movies found. Select one.').addOptions(filmOptions.slice(0, 25)); // Translated
         const row = new ActionRowBuilder().addComponents(selectMenu);
 
-        // O menu de seleção agora é enviado publicamente
+        // The selection menu is now sent publicly
         const reply = await interaction.editReply({
-            content: `Encontramos múltiplos filmes. Por favor, escolha um para verificar:`,
+            content: `We found multiple movies. Please choose one to check:`, // Translated
             components: [row],
-            fetchReply: true, // Importante para poder adicionar o 'awaitMessageComponent'
+            fetchReply: true, 
         });
 
         try {
-            // Usando a forma mais robusta de esperar por um componente
             const selection = await reply.awaitMessageComponent({
                 filter: i => i.user.id === interaction.user.id,
                 componentType: ComponentType.StringSelect,
                 time: 60_000,
             });
             const filmSlug = selection.values[0];
-            // Passamos a 'selection' que é a nova interação
             await processFilmCheck(selection, targetDiscordUser, letterboxdUsername, filmSlug);
         } catch (err) {
-            await interaction.editReply({ content: 'O tempo para seleção esgotou.', components: [] });
+            await interaction.editReply({ content: 'Selection time has expired.', components: [] }); // Translated
         }
     } else {
         const filmSlug = filmResults[0].slug;
-        // Passamos a 'interaction' original, pois não houve menu
         await processFilmCheck(interaction, targetDiscordUser, letterboxdUsername, filmSlug);
     }
 }
 
 async function processFilmCheck(interaction, discordUser, letterboxdUsername, filmSlug) {
-    // Se a interação for de um componente, primeiro damos um update para o usuário ver
     if (interaction.isMessageComponent()) {
-        await interaction.update({ content: 'Verificando diário...', components: [] });
+        await interaction.update({ content: 'Checking diary...', components: [] }); // Translated
     }
 
     try {
         const filmDetails = await getFilmDetailsFromSlug(filmSlug);
-        if (!filmDetails) throw new Error('Não foi possível obter detalhes do filme no Letterboxd.');
+        if (!filmDetails) throw new Error('Could not retrieve movie details from Letterboxd.'); // Translated
         
         const [diaryStatus, movieDataTMDB] = await Promise.all([
             checkFilmInDiary(letterboxdUsername, filmSlug),
@@ -102,31 +98,30 @@ async function processFilmCheck(interaction, discordUser, letterboxdUsername, fi
         ]);
 
         const embed = new EmbedBuilder()
-            .setAuthor({ name: `Verificando para: ${letterboxdUsername}`, iconURL: discordUser.displayAvatarURL() })
+            .setAuthor({ name: `Checking for: ${letterboxdUsername}`, iconURL: discordUser.displayAvatarURL() }) // Translated
             .setTitle(`${filmDetails.title} (${filmDetails.year})`)
             .setURL(`https://letterboxd.com/film/${filmSlug}/`)
             .setThumbnail(movieDataTMDB ? getTmdbPosterUrl(movieDataTMDB.poster_path) : null);
 
         if (diaryStatus.watched) {
-            embed.setColor(0x23A55A); // Verde
-            let description = `🟢 ** Sim, ${discordUser.displayName} assistiu!**`;
+            embed.setColor(0x23A55A); // Green
+            let description = `🟢 ** Yes, ${discordUser.displayName} has watched it!**`; // Translated
             let detailsLine = '';
 
             if (diaryStatus.rating) {
                 const stars = '⭐'.repeat(Math.floor(diaryStatus.rating));
                 const halfStar = (diaryStatus.rating % 1 !== 0) ? '½' : '';
-                detailsLine += `**Nota:** ${stars}${halfStar}`;
+                detailsLine += `**Rating:** ${stars}${halfStar}`; // Translated
             }
 
             if (diaryStatus.date) {
                 const formattedDate = diaryStatus.date.split('-').reverse().join('/');
                 if (detailsLine.length > 0) {
-                    // ALTERADO: Removido o '|' e mantido um espaçamento maior
-                    detailsLine += '   '; 
+                    detailsLine += '   '; 
                 }
-                detailsLine += `** Data:** ${formattedDate}`;
+                detailsLine += `** Date:** ${formattedDate}`; // Translated
             }
-
+            
             if(detailsLine.length > 0) {
                 description += `\n\n${detailsLine}`;
             }
@@ -134,14 +129,14 @@ async function processFilmCheck(interaction, discordUser, letterboxdUsername, fi
             embed.setDescription(description);
 
         } else {
-            embed.setColor(0xED4245); // Vermelho
-            embed.setDescription(`🔴 ** Não, ${discordUser.displayName} não assistiu.**`);
+            embed.setColor(0xED4245); // Red
+            embed.setDescription(`🔴 ** No, ${discordUser.displayName} has not watched it.**`); // Translated
         }
         
         await interaction.editReply({ content: '', embeds: [embed], components: [] });
 
     } catch (error) {
-        console.error('Erro ao processar a checagem do filme:', error);
-        await interaction.editReply({ content: `Ocorreu um erro ao verificar o filme: ${error.message}`, embeds: [], components: [] });
+        console.error('Error processing film check:', error); // Translated
+        await interaction.editReply({ content: `An error occurred while checking the movie: ${error.message}`, embeds: [], components: [] }); // Translated
     }
 }

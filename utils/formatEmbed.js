@@ -2,12 +2,12 @@
 
 import { EmbedBuilder, AttachmentBuilder } from 'discord.js';
 import { getTmdbPosterUrl } from '../api/tmdb.js';
-import sharp from 'sharp'; // Usando sharp
+import sharp from 'sharp';
 import axios from 'axios';
 
-// --- FUNÇÕES AUXILIARES ---
+// --- AUXILIARY FUNCTIONS ---
 
-function formatDateBr(dateString) {
+function formatDateEn(dateString) { // Renamed to formatDateEn for English
     if (!dateString) return 'N/A';
     let date;
     try {
@@ -18,7 +18,7 @@ function formatDateBr(dateString) {
                 const [_, day, monthAbbr, year] = parts;
                 const monthNames = {
                     'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
-                    'Jul': 6, 'Ago': 7, 'Set': 8, 'Out': 9, 'Nov': 10, 'Dez': 11
+                    'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
                 };
                 const monthIndex = monthNames[monthAbbr] !== undefined ? monthNames[monthAbbr] : new Date(Date.parse(monthAbbr +" 1, 2000")).getMonth();
                 date = new Date(year, monthIndex, day);
@@ -31,14 +31,14 @@ function formatDateBr(dateString) {
     }
 
     const day = String(date.getDate()).padStart(2, '0');
-    const month = date.toLocaleString('pt-BR', { month: 'short' });
+    const month = date.toLocaleString('en-US', { month: 'short' }); // Changed to en-US
     const yearShort = String(date.getFullYear()).slice(-2);
 
     return `${day} ${month.charAt(0).toUpperCase() + month.slice(1)} ${yearShort}`;
 }
 
 function convertRatingToStars(rating) {
-    if (rating === null || isNaN(rating)) return 'Não avaliado';
+    if (rating === null || isNaN(rating)) return 'Not Rated'; // Translated
 
     let stars = '';
     const fullStars = Math.floor(rating);
@@ -56,19 +56,19 @@ function convertRatingToStars(rating) {
 }
 
 
-// --- FUNÇÕES DE CRIAÇÃO DE EMBED ---
+// --- EMBED CREATION FUNCTIONS ---
 
 async function createDiaryEmbed(latestFilm, tmdbDetails, letterboxdUsername) {
     const embed = new EmbedBuilder()
-        .setColor(0xFFFF00) // Amarelo
+        .setColor(0xFFFF00) // Yellow
         .setURL(latestFilm.url);
 
-    const embedTitle = `Último Filme de ${letterboxdUsername} �`;
+    const embedTitle = `Last Film by ${letterboxdUsername} 🎬`; // Translated
     embed.setTitle(embedTitle);
 
-    let description = `**Filme:** ${latestFilm.title} (${latestFilm.year})\n`;
-    description += `**Assistido:** ${formatDateBr(latestFilm.watchedDateFull || latestFilm.watchedDate)}\n`;
-    description += `**Nota:** ${convertRatingToStars(latestFilm.rating)}\n`;
+    let description = `**Film:** ${latestFilm.title} (${latestFilm.year})\n`; // Translated
+    description += `**Watched:** ${formatDateEn(latestFilm.watchedDateFull || latestFilm.watchedDate)}\n`; // Using formatDateEn
+    description += `**Rating:** ${convertRatingToStars(latestFilm.rating)}\n`; // Translated
 
     embed.setDescription(description);
 
@@ -76,7 +76,7 @@ async function createDiaryEmbed(latestFilm, tmdbDetails, letterboxdUsername) {
         embed.setImage(getTmdbPosterUrl(tmdbDetails.poster_path, 'w500'));
 
         const roundedRating = tmdbDetails.vote_average ? parseFloat(tmdbDetails.vote_average).toFixed(1) : 'N/A';
-        const votesFormatted = tmdbDetails.vote_count ? `${tmdbDetails.vote_count.toLocaleString('pt-BR')} Votos` : 'N/A';
+        const votesFormatted = tmdbDetails.vote_count ? `${tmdbDetails.vote_count.toLocaleString('en-US')} Votes` : 'N/A'; // Translated
 
         embed.addFields(
             {
@@ -85,12 +85,12 @@ async function createDiaryEmbed(latestFilm, tmdbDetails, letterboxdUsername) {
                 inline: true
             },
             {
-                name: 'Gêneros (TMDB)',
+                name: 'Genres (TMDB)', // Translated
                 value: tmdbDetails.genres?.join(', ') || 'N/A',
                 inline: true
             },
             {
-                name: 'Sinopse (TMDB)',
+                name: 'Synopsis (TMDB)', // Translated
                 value: tmdbDetails.overview ? tmdbDetails.overview.substring(0, 500) + '...' : (tmdbDetails.overview_en ? tmdbDetails.overview_en.substring(0, 500) + '...' : 'N/A'),
                 inline: false
             }
@@ -104,26 +104,26 @@ async function createDiaryEmbed(latestFilm, tmdbDetails, letterboxdUsername) {
 
 async function createReviewEmbed(reviewDetails, tmdbDetails, letterboxdUsername) {
     const embed = new EmbedBuilder()
-        .setColor(0xAA00AA) // Cor Roxa para reviews
+        .setColor(0xAA00AA) // Purple color for reviews
         .setURL(reviewDetails.reviewUrl);
 
-    const embedTitle = `Última Review de ${letterboxdUsername} 📝`; // Ícone de lápis para review
+    const embedTitle = `Latest Review by ${letterboxdUsername} 📝`; // Translated
     embed.setTitle(embedTitle);
 
-    let description = `**Filme:** ${reviewDetails.filmTitle} (${reviewDetails.filmYear})\n`;
+    let description = `**Film:** ${reviewDetails.filmTitle} (${reviewDetails.filmYear})\n`; // Translated
 
     if (tmdbDetails && tmdbDetails.genres && tmdbDetails.genres.length > 0) {
-        description += `**Gêneros:** ${tmdbDetails.genres.join(', ')}\n`;
+        description += `**Genres:** ${tmdbDetails.genres.join(', ')}\n`; // Translated
     } else {
-        description += `**Gêneros:** N/A\n`;
+        description += `**Genres:** N/A\n`; // Translated
     }
 
-    description += `**Escrito:** ${formatDateBr(reviewDetails.reviewDate)}\n`;
-    description += `**Nota:** ${convertRatingToStars(reviewDetails.rating)}\n\n`;
+    description += `**Written:** ${formatDateEn(reviewDetails.reviewDate)}\n`; // Translated, using formatDateEn
+    description += `**Rating:** ${convertRatingToStars(reviewDetails.rating)}\n\n`; // Translated
 
     if (reviewDetails.reviewText.length > 700) {
         description += `${reviewDetails.reviewText.substring(0, 700)}...\n`;
-        description += `[Leia a review completa aqui](${reviewDetails.reviewUrl})\n`;
+        description += `[Read full review here](${reviewDetails.reviewUrl})\n`; // Translated
     } else {
         description += `${reviewDetails.reviewText}\n`;
     }
@@ -141,21 +141,21 @@ async function createReviewEmbed(reviewDetails, tmdbDetails, letterboxdUsername)
 
 async function createDailyDiaryEmbed(filmsDoDia, letterboxdUsername, displayDate) {
     const embed = new EmbedBuilder()
-        .setColor(0x00FF00) // Uma cor verde para o diário diário, para diferenciar
-        .setTitle(`Diário de ${letterboxdUsername} em ${displayDate} 🗓️`); // Título com a data
+        .setColor(0x00FF00) // A green color for the daily diary, to differentiate
+        .setTitle(`Diary of ${letterboxdUsername} on ${displayDate} 🗓️`); // Translated
 
     let description = '';
     if (filmsDoDia.length > 0) {
         for (const filmData of filmsDoDia) {
             description += `**- ${filmData.title}** (${filmData.year})\n`;
-            description += `  Nota: ${convertRatingToStars(filmData.rating)}\n`;
+            description += `  Rating: ${convertRatingToStars(filmData.rating)}\n`; // Translated
             if (filmData.tmdbDetails) {
-                description += `  Gêneros (TMDB): ${filmData.tmdbDetails.genres?.join(', ') || 'N/A'}\n`;
+                description += `  Genres (TMDB): ${filmData.tmdbDetails.genres?.join(', ') || 'N/A'}\n`; // Translated
             }
-            description += `  [Ver no Letterboxd](${filmData.url})\n\n`;
+            description += `  [View on Letterboxd](${filmData.url})\n\n`; // Translated
         }
     } else {
-        description = `Nenhum filme assistido nesta data.`;
+        description = `No films watched on this date.`; // Translated
     }
     embed.setDescription(description.substring(0, 4096));
 
@@ -170,8 +170,8 @@ async function createDailyDiaryEmbed(filmsDoDia, letterboxdUsername, displayDate
 
 async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
     const embed = new EmbedBuilder()
-        .setColor(0xFF00FF) // Uma cor vibrante para favoritos (ex: magenta)
-        .setTitle(`Filmes Favoritos de ${letterboxdUsername} ❤️`);
+        .setColor(0xFF00FF) // A vibrant color for favorites (e.g., magenta)
+        .setTitle(`Favorite Films of ${letterboxdUsername} ❤️`); // Translated
 
     let attachment = null;
     let imageFailureMessage = '';
@@ -192,7 +192,7 @@ async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
                     const response = await axios.get(url, { responseType: 'arraybuffer' });
                     return response.data;
                 } catch (error) {
-                    console.error(`Erro ao baixar pôster de ${url}:`, error.message);
+                    console.error(`Error downloading poster from ${url}:`, error.message); // Translated
                     return sharp({ create: { width: 342, height: 513, channels: 4, background: { r: 100, g: 100, b: 100, alpha: 1 } } }).png().toBuffer();
                 }
             })
@@ -217,12 +217,12 @@ async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
                 .composite(compositeImages).png().toBuffer();
             attachment = new AttachmentBuilder(combinedImageBuffer, { name: 'favorites_grid.png' });
         } catch (sharpError) {
-            console.error('Erro ao compor a imagem com sharp:', sharpError.message);
-            imageFailureMessage = 'Houve um erro ao gerar a imagem da grade de pôsteres.';
+            console.error('Error composing image with sharp:', sharpError.message); // Translated
+            imageFailureMessage = 'An error occurred while generating the poster grid image.'; // Translated
             attachment = null;
         }
     } else {
-        imageFailureMessage = 'Não foi possível obter os pôsteres dos filmes favoritos.';
+        imageFailureMessage = 'Could not retrieve favorite film posters.'; // Translated
     }
 
     if (imageFailureMessage) {
@@ -232,47 +232,47 @@ async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
     return { embed, attachment };
 }
 
-// --- VERSÃO FINAL DA FUNÇÃO createLikesGridImage (AGORA GENÉRICA PARA GRADES) ---
+// --- FINAL VERSION OF createGridImage FUNCTION (NOW GENERIC FOR GRIDS) ---
 /**
- * Cria um embed e uma imagem de grade para filmes.
- * Suporta hyperlinks e grades incompletas com fundo transparente.
- * Esta função será usada para "Likes" e "Filmes Assistidos".
- * @param {Array<Object>} films Array de objetos de filmes com slug, title, year, posterUrl.
- * @param {string} gridTitle O título da grade (ex: "Filmes Curtidos de X", "Filmes Assistidos Hoje por Y").
- * @param {number} cols Número de colunas.
- * @param {number} rows Número de linhas.
- * @returns {Promise<Object>} Um objeto contendo o EmbedBuilder e o AttachmentBuilder (a imagem).
+ * Creates an embed and a grid image for films.
+ * Supports hyperlinks and incomplete grids with transparent backgrounds.
+ * This function will be used for "Likes" and "Watched Films".
+ * @param {Array<Object>} films Array of film objects with slug, title, year, posterUrl.
+ * @param {string} gridTitle The title of the grid (e.g., "Liked Films of X", "Watched Films Today by Y").
+ * @param {number} cols Number of columns.
+ * @param {number} rows Number of rows.
+ * @returns {Promise<Object>} An object containing the EmbedBuilder and the AttachmentBuilder (the image).
  */
 async function createGridImage(films, gridTitle, cols, rows) {
     const embed = new EmbedBuilder()
-        .setColor(0x6f52e3) // Cor roxa
-        .setTitle(`Grade de ${gridTitle}`); // Título dinâmico
+        .setColor(0x6f52e3) // Purple color
+        .setTitle(`Grid of ${gridTitle}`); // Dynamic title
 
     let attachment = null;
     const requiredFilms = cols * rows;
 
-    // LÓGICA DE HYPERLINKS
-    // Garante que title e year não sejam undefined no texto
+    // HYPERLINK LOGIC
+    // Ensures title and year are not undefined in the text
     const filmListDescription = films
-        .map((film, index) => `${index + 1}. **[${film.title || 'Filme Desconhecido'} (${film.year || '????'})](https://letterboxd.com/film/${film.slug}/)**`)
+        .map((film, index) => `${index + 1}. **[${film.title || 'Unknown Film'} (${film.year || '????'})](https://letterboxd.com/film/${film.slug}/)**`) // Translated
         .join('\n');
     embed.setDescription(filmListDescription);
 
-    // Baixa os pôsteres. Se falhar ou for null, o resultado será null.
-    // Preenche a lista com 'null' para os espaços que ficarão vazios
+    // Downloads posters. If it fails or is null, the result will be null.
+    // Fills the list with 'null' for the spaces that will be empty
     const posterPromises = [];
     for (let i = 0; i < requiredFilms; i++) {
-        const film = films[i]; // Pode ser undefined se houver menos filmes que requiredFilms
+        const film = films[i]; 
         if (film && film.posterUrl) {
             posterPromises.push(axios.get(film.posterUrl, { responseType: 'arraybuffer' })
                 .then(response => response.data)
                 .catch(error => {
-                    console.error(`Erro ao baixar pôster para ${film.title} (${film.posterUrl}):`, error.message);
-                    return null; // Trata erro de download como um espaço vazio
+                    console.error(`Error downloading poster for ${film.title} (${film.posterUrl}):`, error.message); // Translated
+                    return null; 
                 })
             );
         } else {
-            posterPromises.push(Promise.resolve(null)); // Para espaços vazios intencionais
+            posterPromises.push(Promise.resolve(null)); // For intentional empty spaces
         }
     }
     const posterBuffers = await Promise.all(posterPromises);
@@ -293,8 +293,6 @@ async function createGridImage(films, gridTitle, cols, rows) {
                 top: Math.floor(i / cols) * (posterHeight + gap)
             });
         }
-        // Se o buffer for null (pôster ausente ou erro), não adicionamos nada para sharp
-        // O fundo transparente já cuidará do espaço vazio.
     }
     
     try {
@@ -303,7 +301,7 @@ async function createGridImage(films, gridTitle, cols, rows) {
                 width: outputWidth,
                 height: outputHeight,
                 channels: 4,
-                background: { r: 0, g: 0, b: 0, alpha: 0 } // Fundo totalmente transparente
+                background: { r: 0, g: 0, b: 0, alpha: 0 } 
             }
         })
         .composite(compositeImages)
@@ -311,8 +309,8 @@ async function createGridImage(films, gridTitle, cols, rows) {
         .toBuffer();
         attachment = new AttachmentBuilder(combinedImageBuffer, { name: `grid_${cols}x${rows}.png` });
     } catch (sharpError) {
-        console.error('Erro ao compor a imagem da grade com sharp:', sharpError.message);
-        embed.setFooter({ text: 'Houve um erro ao gerar a imagem da grade.' });
+        console.error('Error composing grid image with sharp:', sharpError.message); // Translated
+        embed.setFooter({ text: 'An error occurred while generating the grid image.' }); // Translated
     }
 
     return { embed, attachment };
@@ -321,100 +319,90 @@ async function createGridImage(films, gridTitle, cols, rows) {
 
 async function createProfileEmbed(profileStats, username) {
     const embed = new EmbedBuilder()
-        .setColor(0xFFFFFF) // Cor branca (0xFFFFFF)
-        .setTitle(`Perfil Letterboxd de ${username}`)
-        .setURL(profileStats.profileUrl) // Link para o perfil no Letterboxd
-        .setThumbnail(profileStats.userAvatarUrl || null); // Adiciona o avatar como thumbnail, se existir
+        .setColor(0xFFFFFF) // White color
+        .setTitle(`Letterboxd Profile of ${username}`) // Translated
+        .setURL(profileStats.profileUrl) 
+        .setThumbnail(profileStats.userAvatarUrl || null); 
 
-    // Remover rodapé
     embed.setFooter(null);
 
     const fields = [];
 
-    // Filmes Assistidos (Total) e Filmes Este Ano - Lado a lado
     if (profileStats.totalFilmsWatched !== 'N/A') {
         fields.push({
-            name: '🎬 Filmes Assistidos:',
+            name: '🎬 Films Watched:', // Translated
             value: profileStats.totalFilmsWatched,
             inline: true
         });
     }
     if (profileStats.filmsThisYear !== 'N/A') {
         fields.push({
-            name: '📅 Filmes Este Ano:',
+            name: '📅 Films This Year:', // Translated
             value: profileStats.filmsThisYear,
             inline: true
         });
     }
-    // Adicionar um campo vazio para forçar uma nova linha
-    // Verificar se pelo menos um dos campos do grupo foi adicionado
     if (profileStats.totalFilmsWatched !== 'N/A' || profileStats.filmsThisYear !== 'N/A') {
-        fields.push({ name: '\u200b', value: '\u200b', inline: false }); // Campo invisível NÃO INLINE
+        fields.push({ name: '\u200b', value: '\u200b', inline: false }); 
     }
 
-
-    // Seguindo e Seguidores - Lado a lado
     if (profileStats.following !== 'N/A') {
         fields.push({
-            name: '🤝 Seguindo:',
+            name: '🤝 Following:', // Translated
             value: profileStats.following,
             inline: true
         });
     }
     if (profileStats.followers !== 'N/A') {
         fields.push({
-            name: '👥 Seguidores:',
+            name: '👥 Followers:', // Translated
             value: profileStats.followers,
             inline: true
         });
     }
-    // Adicionar um campo vazio para forçar uma nova linha
     if (profileStats.following !== 'N/A' || profileStats.followers !== 'N/A') {
         fields.push({ name: '\u200b', value: '\u200b', inline: false });
     }
 
-    // Watchlist e Tags Usadas - Lado a lado
     if (profileStats.watchlistCount !== 'N/A') {
         fields.push({
-            name: '👀 Watchlist:',
+            name: '👀 Watchlist:', // Translated
             value: profileStats.watchlistCount,
             inline: true
         });
     }
     if (profileStats.tagsList && profileStats.tagsList.length > 0) {
         fields.push({
-            name: '🏷️ Tags Usadas:',
+            name: '🏷️ Tags Used:', // Translated
             value: profileStats.tagsList.join(', '),
             inline: true
         });
     } else if (profileStats.tagsList && profileStats.tagsList.length === 0) {
         fields.push({
-            name: '🏷️ Tags Usadas:',
-            value: 'Nenhuma',
+            name: '🏷️ Tags Used:', // Translated
+            value: 'None', // Translated
             inline: true
         });
     }
-    // Não precisa de campo vazio final.
-
 
     if (fields.length > 0) {
         embed.addFields(fields);
     } else {
-        embed.setDescription('Não foi possível obter as estatísticas do perfil.');
+        embed.setDescription('Could not retrieve profile statistics.'); // Translated
     }
 
     return { embed };
 }
 
-// --- BLOCO FINAL DE EXPORTAÇÃO DE TODAS AS FUNÇÕES ---
-// Todas as funções declaradas acima são exportadas aqui.
+// --- FINAL EXPORT BLOCK OF ALL FUNCTIONS ---
+// All functions declared above are exported here.
 export {
     createDiaryEmbed,
     createReviewEmbed,
     createDailyDiaryEmbed,
     createFavoritesEmbed,
-    createGridImage, // Exporta a função genérica de grid
+    createGridImage, 
     createProfileEmbed,
-    formatDateBr,
+    formatDateEn, // Exporting formatDateEn
     convertRatingToStars
 };

@@ -1,9 +1,9 @@
-// commands/unlink.js
+// commands/unlink.js (Corrected Version - Translated to English)
 
-import { SlashCommandBuilder, MessageFlags } from 'discord.js'; // Adicionado MessageFlags
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url'; // Corrigido ' = ' para ' from '
+import { fileURLToPath } from 'node:url'; 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,10 +12,10 @@ const usersFilePath = path.join(__dirname, '..', 'storage', 'users.json');
 
 export const data = new SlashCommandBuilder()
     .setName('unlink')
-    .setDescription('Desvincula sua conta Letterboxd do bot.');
+    .setDescription('Unlinks your Letterboxd account from the bot.'); // Translated
 
 export async function execute(interaction) {
-    // Deferral efêmero, pois a resposta final é sempre efêmera.
+    // Ephemeral deferral, as the final response is always ephemeral.
     await interaction.deferReply({ flags: MessageFlags.Ephemeral }); 
 
     const discordId = interaction.user.id;
@@ -30,10 +30,10 @@ export async function execute(interaction) {
             if (readError.code === 'ENOENT') {
                 users = {};
             } else {
-                console.error(`Erro ao ler users.json: ${readError.message}`);
+                console.error(`Error reading users.json: ${readError.message}`); // Translated
                 await interaction.editReply({
-                    content: 'Ocorreu um erro interno ao tentar ler os vínculos de usuário. Por favor, tente novamente mais tarde.',
-                    flags: MessageFlags.Ephemeral // EFÊMERO
+                    content: 'An internal error occurred while trying to read user links. Please try again later.', // Translated
+                    flags: MessageFlags.Ephemeral 
                 });
                 return;
             }
@@ -44,21 +44,21 @@ export async function execute(interaction) {
             await fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), 'utf8'); 
 
             await interaction.editReply({
-                content: `Sua conta Letterboxd foi desvinculada com sucesso!`,
-                flags: MessageFlags.Ephemeral // EFÊMERO
+                content: `Your Letterboxd account has been successfully unlinked!`, // Translated
+                flags: MessageFlags.Ephemeral 
             });
         } else {
             await interaction.editReply({
-                content: `Você não tem uma conta Letterboxd vinculada para desvincular. Use \`/link\` para vincular uma.`,
-                flags: MessageFlags.Ephemeral // EFÊMERO
+                content: `You do not have a Letterboxd account linked to unlink. Use \`/link\` to link one.`, // Translated
+                flags: MessageFlags.Ephemeral 
             });
         }
 
     } catch (error) {
-        console.error(`Erro ao processar comando /unlink para ${userTag}:`, error);
+        console.error(`Error processing /unlink command for ${userTag}:`, error); // Translated
         await interaction.editReply({
-            content: `Ocorreu um erro inesperado ao desvincular sua conta. Detalhes: ${error.message}`,
-            flags: MessageFlags.Ephemeral // EFÊMERO
+            content: `An unexpected error occurred while unlinking your account. Details: ${error.message}`, // Translated
+            flags: MessageFlags.Ephemeral 
         });
     }
 }

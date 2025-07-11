@@ -1,4 +1,4 @@
-// commands/review.js (Versão Corrigida)
+// commands/review.js (Corrected Version - Translated to English)
 
 import { SlashCommandBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
@@ -14,24 +14,24 @@ const usersFilePath = path.join(__dirname, '..', 'storage', 'users.json');
 
 export const data = new SlashCommandBuilder()
     .setName('review')
-    .setDescription('Mostra a última review ou busca uma review específica de um filme.')
+    .setDescription('Shows the latest review or searches for a specific movie review.') // Translated
     .addUserOption(option =>
-        option.setName('usuario')
-            .setDescription('Mencione outro usuário do Discord para ver a review dele.')
+        option.setName('user') // Changed 'usuario' to 'user'
+            .setDescription('Mention another Discord user to view their review.') // Translated
             .setRequired(false))
     .addStringOption(option =>
-        option.setName('filme')
-            .setDescription('Título do filme para buscar uma review específica.')
+        option.setName('film') // Changed 'filme' to 'film'
+            .setDescription('Title of the movie to search for a specific review.') // Translated
             .setRequired(false));
 
-// --- NOVA FUNÇÃO HELPER PARA PROCESSAR E ENVIAR O EMBED ---
-// Isso evita repetição de código
+// --- NEW HELPER FUNCTION TO PROCESS AND SEND THE EMBED ---
+// This avoids code repetition
 async function processAndSendReview(interaction, review, letterboxdUsername, isUpdate = false) {
-    // Validação crucial para evitar o erro de 'description required'
+    // Crucial validation to avoid 'description required' error
     if (!review || !review.filmTitle || !review.reviewUrl) {
-        console.error('Erro de scraping: O objeto da review retornado é inválido.', review);
-        const errorMessage = 'Não foi possível extrair os detalhes da review. O formato da página pode ter mudado.';
-        if (isUpdate) { // Se for um update de um menu/botão
+        console.error('Scraping error: The returned review object is invalid.', review); // Translated
+        const errorMessage = 'Could not extract review details. Page format might have changed.'; // Translated
+        if (isUpdate) { // If it's an update from a menu/button
             return interaction.editReply({ content: errorMessage, embeds: [], components: [] });
         }
         return interaction.editReply({ content: errorMessage });
@@ -42,14 +42,14 @@ async function processAndSendReview(interaction, review, letterboxdUsername, isU
         try {
             tmdbDetails = await searchMovieTMDB(review.filmTitle, review.filmYear);
         } catch (tmdbError) {
-            console.error(`Erro TMDB para ${review.filmTitle}:`, tmdbError.message);
+            console.error(`TMDB error for ${review.filmTitle}:`, tmdbError.message); // Translated
         }
     }
 
     const embed = await createReviewEmbed(review, tmdbDetails, letterboxdUsername);
     
     const payload = { embeds: [embed], components: [] };
-    if (!isUpdate) { // Se não for um update, podemos limpar o conteúdo
+    if (!isUpdate) { // If it's not an update, we can clear the content
         payload.content = '';
     }
 
@@ -58,23 +58,24 @@ async function processAndSendReview(interaction, review, letterboxdUsername, isU
 
 
 export async function execute(interaction) {
-    const targetDiscordUser = interaction.options.getUser('usuario') || interaction.user;
-    const filmQuery = interaction.options.getString('filme');
+    const targetDiscordUser = interaction.options.getUser('user') || interaction.user; // Changed 'usuario' to 'user'
+    const filmQuery = interaction.options.getString('film'); // Changed 'filme' to 'film'
 
-    // Validações iniciais com respostas efêmeras
+    // Initial validations with ephemeral responses
     let users = {};
     try {
         const data = await fs.readFile(usersFilePath, 'utf8');
         users = JSON.parse(data);
     } catch (readError) {
         if (readError.code !== 'ENOENT') {
-            return interaction.reply({ content: 'Erro interno ao buscar os vínculos de usuário.', flags: [MessageFlags.Ephemeral] });
+            return interaction.reply({ content: 'Internal error fetching user links.', flags: [MessageFlags.Ephemeral] }); // Translated
         }
     }
+    // Handle both string and object formats for userEntry
     const letterboxdUsername = users[targetDiscordUser.id]?.letterboxd || users[targetDiscordUser.id];
     if (!letterboxdUsername) {
-        const who = targetDiscordUser.id === interaction.user.id ? 'Você não vinculou sua conta' : `O usuário ${targetDiscordUser.displayName} não vinculou a conta`;
-        return interaction.reply({ content: `${who} Letterboxd. Use /link.`, flags: [MessageFlags.Ephemeral] });
+        const who = targetDiscordUser.id === interaction.user.id ? 'You have not linked your account' : `User ${targetDiscordUser.displayName} has not linked their account`; // Translated
+        return interaction.reply({ content: `${who} Letterboxd. Use /link.`, flags: [MessageFlags.Ephemeral] }); // Translated
     }
 
     await interaction.deferReply();
@@ -83,7 +84,7 @@ export async function execute(interaction) {
         const allUserReviews = await getRecentReviews(letterboxdUsername);
 
         if (!allUserReviews || allUserReviews.length === 0) {
-            return interaction.editReply({ content: `Não encontrei nenhuma review para \`${letterboxdUsername}\`.` });
+            return interaction.editReply({ content: `Could not find any reviews for \`${letterboxdUsername}\`.` }); // Translated
         }
 
         if (filmQuery) {
@@ -92,21 +93,21 @@ export async function execute(interaction) {
             );
 
             if (filteredReviews.length === 0) {
-                return interaction.editReply({ content: `Não encontrei nenhuma review para "${filmQuery}" no perfil de \`${letterboxdUsername}\`.` });
+                return interaction.editReply({ content: `Could not find any reviews for "${filmQuery}" in \`${letterboxdUsername}\`'s profile.` }); // Translated
             } else if (filteredReviews.length === 1) {
                 await processAndSendReview(interaction, filteredReviews[0], letterboxdUsername);
             } else {
                 const reviewsToChoose = filteredReviews.slice(0, 25);
                 const selectOptions = reviewsToChoose.map((review, index) => ({
                     label: `${review.filmTitle} (${review.filmYear || '????'})`,
-                    description: `Nota: ${review.rating ? '⭐'.repeat(review.rating) : 'N/A'}`,
+                    description: `Rating: ${review.rating ? '⭐'.repeat(review.rating) : 'N/A'}`, // Translated
                     value: index.toString(),
                 }));
-                const selectMenu = new StringSelectMenuBuilder().setCustomId('select_review').setPlaceholder('Selecione a review que deseja ver...').addOptions(selectOptions);
+                const selectMenu = new StringSelectMenuBuilder().setCustomId('select_review').setPlaceholder('Select the review you want to view...').addOptions(selectOptions); // Translated
                 const row = new ActionRowBuilder().addComponents(selectMenu);
 
                 const reply = await interaction.editReply({
-                    content: `Encontrei ${filteredReviews.length} reviews para "${filmQuery}". Selecione uma:`,
+                    content: `Found ${filteredReviews.length} reviews for "${filmQuery}". Select one:`, // Translated
                     components: [row],
                 });
 
@@ -122,16 +123,16 @@ export async function execute(interaction) {
                     await processAndSendReview(selection, targetReview, letterboxdUsername, true);
 
                 } catch (err) {
-                    await interaction.editReply({ content: 'Você não selecionou nenhuma review a tempo.', components: [] });
+                    await interaction.editReply({ content: 'You did not select a review in time.', components: [] }); // Translated
                 }
             }
         } else {
-            // Se não forneceu 'filme', pega a última review
+            // If no 'film' is provided, get the latest review
             const latestReview = allUserReviews[0];
             await processAndSendReview(interaction, latestReview, letterboxdUsername);
         }
     } catch (error) {
-        console.error(`Erro no /review para ${targetDiscordUser.tag}:`, error);
-        await interaction.editReply({ content: `Ocorreu um erro ao acessar as reviews deste usuário. Detalhes: ${error.message}` });
+        console.error(`Error in /review for ${targetDiscordUser.tag}:`, error); // Translated
+        await interaction.editReply({ content: `An error occurred while accessing this user's reviews. Details: ${error.message}` }); // Translated
     }
 }

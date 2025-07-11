@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import getLikedFilms from '../scraper/getLikedFilms.js';
 import getFilmDetailsFromSlug from '../scraper/getFilmDetailsFromSlug.js';
 import { searchMovieTMDB } from '../api/tmdb.js';
-import { createGridImage } from '../utils/formatEmbed.js'; // Importa a função genérica de grid
+import { createGridImage } from '../utils/formatEmbed.js'; // Imports the generic grid function
 
 import { 
     getDailyWatchedFilms, 
@@ -23,20 +23,20 @@ const usersFilePath = path.join(__dirname, '..', 'storage', 'users.json');
 
 export const data = new SlashCommandBuilder()
     .setName('grid')
-    .setDescription('Gera uma grade de pôsteres de filmes (curtidos ou assistidos).')
+    .setDescription('Generates a poster grid of movies (liked or watched).') // Translated
     .addUserOption(option =>
-        option.setName('usuario')
-            .setDescription('Mencione outro usuário para ver a grade dele.')
+        option.setName('user') // Changed 'usuario' to 'user'
+            .setDescription('Mention another user to view their grid.') // Translated
             .setRequired(false));
 
 export async function execute(interaction) {
     await interaction.deferReply();
 
-    const targetDiscordUser = interaction.options.getUser('usuario') || interaction.user;
+    const targetDiscordUser = interaction.options.getUser('user') || interaction.user; // Changed 'usuario' to 'user'
     let usersData = {};
     try {
         usersData = JSON.parse(await fs.readFile(usersFilePath, 'utf8'));
-    } catch (e) { /* ignora se o arquivo não existe */ }
+    } catch (e) { /* ignores if file does not exist */ }
     
     const userEntry = usersData[targetDiscordUser.id];
     let letterboxdUsername;
@@ -44,27 +44,27 @@ export async function execute(interaction) {
     else if (typeof userEntry === 'object' && userEntry !== null) letterboxdUsername = userEntry.letterboxd;
 
     if (!letterboxdUsername) {
-        const who = targetDiscordUser.id === interaction.user.id ? 'Você não vinculou' : `O usuário ${targetDiscordUser.displayName} não vinculou`;
-        return interaction.editReply({ content: `${who} uma conta do Letterboxd. Use /link.`, ephemeral: true });
+        const who = targetDiscordUser.id === interaction.user.id ? 'You have not linked' : `User ${targetDiscordUser.displayName} has not linked`; // Translated
+        return interaction.editReply({ content: `${who} a Letterboxd account. Use /link.`, ephemeral: true }); // Translated
     }
 
     const typeOptions = [
-        { label: 'Filmes Curtidos (Likes)', description: 'Grade dos filmes que você curtiu.', value: 'likes_grid' },
-        { label: 'Filmes Assistidos (Diário)', description: 'Grade dos filmes assistidos hoje.', value: 'watched_daily_grid' },
-        { label: 'Filmes Assistidos (Semanal)', description: 'Grade dos filmes assistidos na última semana.', value: 'watched_weekly_grid' },
-        { label: 'Filmes Assistidos (Mensal)', description: 'Grade dos filmes assistidos no último mês.', value: 'watched_monthly_grid' },
-        { label: 'Filmes Assistidos (Anual)', description: 'Grade dos filmes assistidos no último ano.', value: 'watched_annual_grid' },
+        { label: 'Liked Movies (Likes)', description: 'Grid of movies you liked.', value: 'likes_grid' }, // Translated
+        { label: 'Watched Movies (Daily)', description: 'Grid of movies watched today.', value: 'watched_daily_grid' }, // Translated
+        { label: 'Watched Movies (Weekly)', description: 'Grid of movies watched last week.', value: 'watched_weekly_grid' }, // Translated
+        { label: 'Watched Movies (Monthly)', description: 'Grid of movies watched last month.', value: 'watched_monthly_grid' }, // Translated
+        { label: 'Watched Movies (Annual)', description: 'Grid of movies watched last year.', value: 'watched_annual_grid' }, // Translated
     ];
 
     const typeSelectMenu = new StringSelectMenuBuilder()
         .setCustomId('select_grid_type')
-        .setPlaceholder('Escolha o tipo de grade...')
+        .setPlaceholder('Choose grid type...') // Translated
         .addOptions(typeOptions);
 
     const typeRow = new ActionRowBuilder().addComponents(typeSelectMenu);
 
     const initialReply = await interaction.editReply({
-        content: `Gerar grade para **${letterboxdUsername}**. Por favor, escolha o tipo de grade:`,
+        content: `Generate grid for **${letterboxdUsername}**. Please choose the grid type:`, // Translated
         components: [typeRow],
     });
 
@@ -82,47 +82,49 @@ export async function execute(interaction) {
         const selectedTypeLabel = typeOptions.find(opt => opt.value === selectedGridType)?.label || selectedGridType;
 
         await typeSelection.update({
-            content: `Tipo de grade selecionado: **${selectedTypeLabel}**.`,
+            content: `Grid type selected: **${selectedTypeLabel}**.`, // Translated
             components: []
         });
 
         if (selectedGridType === 'likes_grid') {
             filmsRawData = await getLikedFilms(letterboxdUsername);
-            gridTitle = `Filmes Curtidos de ${letterboxdUsername}`;
-            console.log(`[Grid Debug] Filmes Curtidos Brutos (${filmsRawData.length}):`, filmsRawData.slice(0, 5));
+            gridTitle = `Liked Movies of ${letterboxdUsername}`; // Translated
+            console.log(`[Grid Debug] Raw Liked Films (${filmsRawData.length}):`, filmsRawData.slice(0, 5)); // Translated
         } else {
             switch (selectedGridType) {
                 case 'watched_daily_grid':
-                    filmsRawData = await getDailyWatchedFilms(letterboxdUsername);
-                    gridTitle = `Filmes Assistidos Hoje por ${letterboxdUsername}`;
+                    filmsRawData = await getDailyWatchedFilms(letterboxdUsername, interaction.guildId); // Pass guildId
+                    gridTitle = `Movies Watched Today by ${letterboxdUsername}`; // Translated
                     break;
                 case 'watched_weekly_grid':
-                    filmsRawData = await getWeeklyWatchedFilms(letterboxdUsername);
-                    gridTitle = `Filmes Assistidos na Última Semana por ${letterboxdUsername}`;
+                    filmsRawData = await getWeeklyWatchedFilms(letterboxdUsername, interaction.guildId); // Pass guildId
+                    gridTitle = `Movies Watched Last Week by ${letterboxdUsername}`; // Translated
                     break;
                 case 'watched_monthly_grid':
-                    filmsRawData = await getMonthlyWatchedFilms(letterboxdUsername);
-                    gridTitle = `Filmes Assistidos no Último Mês por ${letterboxdUsername}`;
+                    filmsRawData = await getMonthlyWatchedFilms(letterboxdUsername, interaction.guildId); // Pass guildId
+                    gridTitle = `Movies Watched Last Month by ${letterboxdUsername}`; // Translated
                     break;
                 case 'watched_annual_grid':
-                    filmsRawData = await getAnnualWatchedFilms(letterboxdUsername);
-                    gridTitle = `Filmes Assistidos no Último Ano por ${letterboxdUsername}`;
+                    filmsRawData = await getAnnualWatchedFilms(letterboxdUsername, interaction.guildId); // Pass guildId
+                    gridTitle = `Movies Watched Last Year by ${letterboxdUsername}`; // Translated
                     break;
                 default:
-                    await interaction.followUp({ content: 'Tipo de grade inválido selecionado.', ephemeral: true });
+                    await interaction.followUp({ content: 'Invalid grid type selected.', ephemeral: true }); // Translated
                     return;
             }
-            console.log(`[Grid Debug] Filmes Assistidos Brutos (${selectedGridType}, ${filmsRawData.length}):`, filmsRawData.slice(0, 5));
+            console.log(`[Grid Debug] Raw Watched Films (${selectedGridType}, ${filmsRawData.length}):`, filmsRawData.slice(0, 5)); // Translated
         }
 
         const filmsWithDetailsAndPosters = [];
         for (const film of filmsRawData) {
-            let currentFilmTitle = null;
-            let currentFilmYear = null;
-            let currentFilmSlug = null;
+            let currentFilmTitle = film.title || film.film_title; 
+            let currentFilmYear = film.year || film.film_year;   
+            let currentFilmSlug = film.slug || film.film_slug;   
+
+            console.log(`[Grid Debug] Initial film data (from DB/Scraper): Title: ${currentFilmTitle}, Year: ${currentFilmYear}, Slug: ${currentFilmSlug}`); // Translated
 
             if (selectedGridType === 'likes_grid') {
-                const preciseDetails = await getFilmDetailsFromSlug(film.slug);
+                const preciseDetails = await getFilmDetailsFromSlug(currentFilmSlug); 
                 if (preciseDetails) {
                     currentFilmTitle = preciseDetails.title;
                     currentFilmYear = preciseDetails.year;
@@ -132,10 +134,7 @@ export async function execute(interaction) {
                     currentFilmYear = film.year;
                     currentFilmSlug = film.slug;
                 }
-            } else {
-                currentFilmTitle = film.film_title;
-                currentFilmYear = film.film_year;
-                currentFilmSlug = film.film_slug;
+                console.log(`[Grid Debug] After getFilmDetailsFromSlug (if likes): Title: ${currentFilmTitle}, Year: ${currentFilmYear}, Slug: ${currentFilmSlug}`); // Translated
             }
             
             let tmdbResult = null;
@@ -143,7 +142,7 @@ export async function execute(interaction) {
                 try {
                     tmdbResult = await searchMovieTMDB(currentFilmTitle, currentFilmYear);
                 } catch (tmdbError) {
-                    console.error(`[Grid Debug] Erro ao buscar TMDB para ${currentFilmTitle}:`, tmdbError.message);
+                    console.error(`[Grid Debug] Error fetching TMDB for ${currentFilmTitle}:`, tmdbError.message); // Translated
                 }
             }
             
@@ -153,25 +152,25 @@ export async function execute(interaction) {
                 slug: currentFilmSlug,
                 posterUrl: tmdbResult ? `https://image.tmdb.org/t/p/w154${tmdbResult.poster_path}` : null
             });
-            console.log(`[Grid Debug] Final film data for push: Title: ${filmsWithDetailsAndPosters[filmsWithDetailsAndPosters.length - 1].title}, Year: ${filmsWithDetailsAndPosters[filmsWithDetailsAndPosters.length - 1].year}, Slug: ${filmsWithDetailsAndPosters[filmsWithDetailsAndPosters.length - 1].slug}, Poster: ${filmsWithDetailsAndPosters[filmsWithDetailsAndPosters.length - 1].posterUrl ? 'OK' : 'N/A'}`);
+            console.log(`[Grid Debug] Final film data for push: Title: ${filmsWithDetailsAndPosters[filmsWithDetailsAndPosters.length - 1].title}, Year: ${filmsWithDetailsAndPosters[filmsWithDetailsAndPosters.length - 1].year}, Slug: ${filmsWithDetailsAndPosters[filmsWithDetailsAndPosters.length - 1].slug}, Poster: ${filmsWithDetailsAndPosters[filmsWithDetailsAndPosters.length - 1].posterUrl ? 'OK' : 'N/A'}`); // Translated
         }
         
         const filmsToGrid = filmsWithDetailsAndPosters;
 
         const gridOptions = Array.from({ length: 9 }, (_, i) => {
             const size = i + 2;
-            return { label: `${size}x${size} (${size * size} Filmes)`, value: `${size}x${size}` };
+            return { label: `${size}x${size} (${size * size} Films)`, value: `${size}x${size}` }; // Translated
         });
 
         const sizeSelectMenu = new StringSelectMenuBuilder()
             .setCustomId('select_grid_size')
-            .setPlaceholder('Escolha o tamanho da grade...')
+            .setPlaceholder('Choose grid size...') // Translated
             .addOptions(gridOptions);
 
         const sizeRow = new ActionRowBuilder().addComponents(sizeSelectMenu);
 
         const sizeReply = await interaction.followUp({
-            content: `O usuário \`${letterboxdUsername}\` tem ${filmsToGrid.length} filmes disponíveis. Escolha o tamanho da grade:`,
+            content: `User \`${letterboxdUsername}\` has ${filmsToGrid.length} films available. Choose grid size:`, // Translated
             components: [sizeRow],
             ephemeral: true
         });
@@ -188,7 +187,7 @@ export async function execute(interaction) {
         const selectedOptionLabel = gridOptions.find(opt => opt.value === selectedGridSizeValue)?.label || selectedGridSizeValue;
         
         await sizeSelection.update({
-            content: `Gerando grade de ${selectedOptionLabel} para ${letterboxdUsername}... Isso pode levar um momento.`,
+            content: `Generating ${selectedOptionLabel} grid for ${letterboxdUsername}... This may take a moment.`, // Translated
             components: []
         });
 
@@ -197,7 +196,7 @@ export async function execute(interaction) {
         const { embed, attachment } = await createGridImage(filmsForGrid, gridTitle, cols, rows);
 
         await interaction.editReply({
-            content: `Grade de ${gridTitle} (${selectedOptionLabel}):`,
+            content: `Grid of ${gridTitle} (${selectedOptionLabel}):`, // Translated
             embeds: [embed],
         });
 
@@ -207,10 +206,10 @@ export async function execute(interaction) {
 
     } catch (err) {
         if (err.message.includes('time')) {
-            await interaction.followUp({ content: 'Tempo esgotado para seleção!', ephemeral: true });
+            await interaction.followUp({ content: 'Selection time has expired!', ephemeral: true }); // Translated
         } else {
-            console.error('Erro ao processar seleção de grade:', err);
-            await interaction.followUp({ content: `Ocorreu um erro ao gerar a grade: ${err.message}`, ephemeral: true });
+            console.error('Error processing grid selection:', err); // Translated
+            await interaction.followUp({ content: `An error occurred while generating the grid: ${err.message}`, ephemeral: true }); // Translated
         }
     }
 }

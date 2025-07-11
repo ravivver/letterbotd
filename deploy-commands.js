@@ -1,28 +1,26 @@
-// deploy-commands.js
-
 import { REST, Routes } from 'discord.js';
 import dotenv from 'dotenv';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url'; // <<< Adicionado pathToFileURL
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 dotenv.config();
 
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
-const GUILD_ID = process.env.GUILD_ID;
+const GUILD_ID = process.env.GUILD_ID; // This GUILD_ID MUST be present in your .env for guild-specific deployment
 
-// Verificações
+// Validations
 if (!DISCORD_BOT_TOKEN) {
-    console.error('Erro: DISCORD_BOT_TOKEN não encontrado no .env!');
+    console.error('Error: DISCORD_BOT_TOKEN not found in .env!');
     process.exit(1);
 }
 if (!CLIENT_ID) {
-    console.error('Erro: CLIENT_ID não encontrado no .env! Obtenha-o no Portal de Desenvolvedores > General Information > Application ID.');
+    console.error('Error: CLIENT_ID not found in .env! Get it from Developer Portal > General Information > Application ID.');
     process.exit(1);
 }
-if (!GUILD_ID) {
-    console.error('Erro: GUILD_ID não encontrado no .env! Obtenha o ID do seu servidor de testes (clique com o botão direito no ícone do servidor > Copiar ID).');
+if (!GUILD_ID) { // IMPORTANT: GUILD_ID is required for guild-specific deployment
+    console.error('Error: GUILD_ID not found in .env! Get your test server ID (right-click server icon > Copy ID).');
     process.exit(1);
 }
 
@@ -35,14 +33,13 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 
 for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
-    // <<< MUDANÇA CRÍTICA AQUI: Converte o caminho do sistema de arquivos para URL antes de importar
     const commandUrl = pathToFileURL(filePath).href; 
-    const command = await import(commandUrl); // Importa o módulo do comando usando a URL
-    // <<< FIM DA MUDANÇA CRÍTICA >>>
+    const command = await import(commandUrl); 
+    
     if ('data' in command && 'execute' in command) {
         commands.push(command.data.toJSON());
     } else {
-        console.warn(`[AVISO] O comando em ${filePath} está faltando a propriedade "data" ou "execute".`);
+        console.warn(`[WARNING] The command in ${filePath} is missing "data" or "execute" property.`);
     }
 }
 
@@ -50,14 +47,26 @@ const rest = new REST({ version: '10' }).setToken(DISCORD_BOT_TOKEN);
 
 (async () => {
     try {
-        console.log(`Iniciando o registro de ${commands.length} comandos de aplicação.`);
+        console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
-        const data = await rest.put(
-            Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+        // Deploy commands GLOBALLY
+        console.log(`Attempting to register commands GLOBALLY...`);
+        const globalData = await rest.put(
+            Routes.applicationCommands(CLIENT_ID), // This registers commands globally
             { body: commands },
         );
+        console.log(`Successfully reloaded ${globalData.length} global application (/) commands.`);
+        console.log(`(Global commands may take up to an hour to propagate to all servers.)`);
 
-        console.log(`Registro bem-sucedido de ${data.length} comandos de aplicação no servidor.`);
+        // Deploy commands to a specific GUILD for instant testing
+        console.log(`Attempting to register commands for GUILD ${GUILD_ID}...`);
+        const guildData = await rest.put(
+            Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), // This registers commands for a specific guild
+            { body: commands },
+        );
+        console.log(`Successfully reloaded ${guildData.length} application (/) commands for guild ${GUILD_ID}.`);
+        console.log(`(Commands for guild ${GUILD_ID} should appear almost instantly.)`);
+
     } catch (error) {
         console.error(error);
     }

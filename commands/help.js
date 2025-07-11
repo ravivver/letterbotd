@@ -1,41 +1,42 @@
-// commands/help.js (Versão com link no crédito)
+// commands/help.js (Version with credit link - Translated to English)
 
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
     .setName('help')
-    .setDescription('Exibe uma lista de todos os comandos e como usá-los.');
+    .setDescription('Displays a list of all commands and how to use them.');
 
 export async function execute(interaction) {
 
     const commands = [
-        { name: '✨ /link `[username]`', value: 'Vincula sua conta Discord a um perfil Letterboxd.\n*Exemplo: `/link meuusuario`*' },
-        { name: '🔍 /search `film: [filme]`', value: 'Busca por um filme ou diretor. Um menu de seleção aparecerá para múltiplos resultados.\n*Exemplo: `/search film: Duna`*' },
-        { name: '✅ /checkfilm `user: [@usuario] film: [filme]`', value: 'Verifica se um usuário já assistiu a um filme específico.\n*Exemplo: `/checkfilm user: @Amigo film: Corra!`*' },
-        { name: '❤️ /favorites `[user]`', value: 'Exibe os 4 filmes favoritos de um usuário.\n*Exemplo: `/favorites user: @Amigo`*' },
-        { name: '📊 /profile `[user]`', value: 'Exibe as estatísticas gerais de um perfil Letterboxd.\n*Exemplo: `/profile`*' },
-        { name: '🖼️ /likesgrid `[user]`', value: 'Gera uma grade personalizada com pôsteres dos filmes curtidos.\n*Exemplo: `/likesgrid`*' },
-        { name: '📝 /review `[user] [film]`', value: 'Exibe a última review de um usuário ou busca uma review específica.\n*Exemplo: `/review film: Parasita`*' },
-        { name: '🗓️ /diary `[user] [dia] [mes] [ano]`', value: 'Mostra os filmes assistidos em uma data específica.\n*Exemplo: `/diary dia: 31 mes: 10 ano: 2024`*' },
-        { name: '🤝 /compare `user1: [@usuario] [user2: @usuario]`', value: 'Compara os filmes assistidos entre dois usuários e mostra os que eles têm em comum.\n*Exemplo: `/compare user1: @Amigo1 user2: @Amigo2`*' },
-        { name: '💡 /hint `[user]`', value: 'Sugere um filme aleatório da watchlist de um usuário para assistir.\n*Exemplo: `/hint user: @Amigo`*' },
-        { name: '🏆 /top `[quantidade]`', value: 'Exibe um ranking dos filmes mais assistidos pelos membros do servidor.\n*Exemplo: `/top quantidade: 5`*' },
-        { name: '❌ /unlink', value: 'Desvincula sua conta do Discord do seu perfil Letterboxd.' }
+        { name: '✅ `/check` `user: [@user] film: [film_title]`', value: 'Checks if a user has watched a specific movie.\n*Example: `/check user: @Friend film: Get Out!`*' },
+        { name: '🤝 `/compare` `user1: [@user] [user2: @user]`', value: 'Compares watched movies between two users.\n*Example: `/compare user1: @Friend1 user2: @Friend2`*' },
+        { name: '🗓️ `/diary` `[user: @user] [day: DD] [month: MM] [year: YYYY]`', value: 'Shows all movies watched on a specific date on Letterboxd.\n*Example: `/diary day: 31 month: 10 year: 2024`*' },
+        { name: '❤️ `/favorites` `[user: @user]`', value: 'Displays a user\'s 4 favorite movies.\n*Example: `/favorites user: @Friend`*' },
+        { name: '🖼️ `/grid` `[user: @user]`', value: 'Generates a poster grid of movies (liked or watched).\n*Example: `/grid user: @Friend`*' },
+        { name: '❓ `/help`', value: 'Displays this list of commands and how to use them.' },
+        { name: '💡 `/hint` `[user: @user]`', value: 'Suggests a random movie from a user\'s watchlist.' },
+        { name: '🎬 `/last` `[user: @user]`', value: 'Shows the last movie watched on a user\'s Letterboxd profile.\n*Example: `/last user: @Friend`*' },
+        { name: '🔗 `/link` `username: [your_username]`', value: 'Associates your Discord ID with a Letterboxd username.\n*Example: `/link username: myusername`*' },
+        { name: '📊 `/profile` `[user: @user]`', value: 'Displays a user\'s Letterboxd profile statistics.\n*Example: `/profile`*' },
+        { name: '📝 `/review` `[user: @user] [film: film_title]`', value: 'Displays a user\'s latest review or searches for a specific movie review.\n*Example: `/review film: Parasite`*' },
+        { name: '🔍 `/search` `term: [movie_or_director_name]`', value: 'Searches for a movie or director on Letterboxd. A selection menu will appear for multiple results.\n*Example: `/search term: Dune`*' },
+        { name: '⚙️ `/setchannel` `channel: [#channel_name]`', value: 'Sets the channel for daily watched film notifications for this server.\n*Example: `/setchannel channel: #daily-watches`*' },
+        { name: '🔄 `/sync`', value: 'Synchronizes your Letterboxd diary with the bot to feed the server ranking.' },
+        { name: '🏆 `/top`', value: 'Displays the top 5 most watched films in this server.' },
+        { name: '🌍 `/topbot`', value: 'Displays the top 5 most watched films across all servers.' },
+        { name: '🗑️ `/unlink`', value: 'Unlinks your Discord account from your Letterboxd profile.' }
     ];
 
-    // ALTERAÇÃO: Movendo o crédito para o final da descrição
-    const descriptionText = `Olá! Aqui estão os comandos disponíveis. Lembre-se que para a maioria deles, você precisa estar vinculado com o \`/link\`.
-    \n*Bot desenvolvido por [Louiz](https://github.com/ravivver/).*`;
-
+    // Translated description text
+    const descriptionText = `Hello! Here are the available commands. Remember that for most of them, you need to be linked with \`/link\`.\n\n*Bot developed by [Louiz](https://github.com/ravivver/).*`;
 
     const helpEmbed = new EmbedBuilder()
-        .setColor(0x00E054)
-        .setTitle('Guia de Comandos do LetterBotd')
-        .setDescription(descriptionText) // Usando o novo texto com o link
+        .setColor(0x00E054) // Green color
+        .setTitle('LetterBotd Command Guide') // Translated title
+        .setDescription(descriptionText) // Using the new translated text with the link
         .setThumbnail(interaction.client.user.displayAvatarURL())
-        .addFields(commands)
-        // ALTERAÇÃO: Removendo o setFooter
-        // .setFooter({ text: 'Bot em desenvolvimento por Louiz.' }); 
+        .addFields(commands);
 
     await interaction.reply({ 
         embeds: [helpEmbed], 

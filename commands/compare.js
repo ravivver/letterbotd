@@ -1,11 +1,11 @@
-// commands/compare.js (Versão com caminho de importação corrigido)
+// commands/compare.js (Version with corrected import path - Translated to English)
 
 import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// ALTERADO: Corrigido o caminho para sair da pasta 'commands' (../) antes de entrar em 'scraper'
+// CHANGED: Corrected path to exit 'commands' folder (../) before entering 'scraper'
 import { getFullDiary } from '../scraper/getFullDiary.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,14 +16,14 @@ const ITEMS_PER_PAGE = 10;
 
 export const data = new SlashCommandBuilder()
     .setName('compare')
-    .setDescription('Compara os filmes assistidos entre dois usuários.')
+    .setDescription('Compares watched movies between two users.') // Translated
     .addUserOption(option =>
         option.setName('user1')
-        .setDescription('O primeiro usuário para comparar.')
+        .setDescription('The first user to compare.') // Translated
         .setRequired(true))
     .addUserOption(option =>
         option.setName('user2')
-        .setDescription('O segundo usuário para comparar (padrão: você mesmo).')
+        .setDescription('The second user to compare (default: yourself).') // Translated
         .setRequired(false));
 
 export async function execute(interaction) {
@@ -31,14 +31,14 @@ export async function execute(interaction) {
     const user2 = interaction.options.getUser('user2') || interaction.user;
 
     if (user1.id === user2.id) {
-        return interaction.reply({ content: 'Você não pode se comparar com você mesmo!', flags: [MessageFlags.Ephemeral] });
+        return interaction.reply({ content: 'You cannot compare yourself with yourself!', flags: [MessageFlags.Ephemeral] }); // Translated
     }
 
     let usersData;
     try {
         usersData = JSON.parse(await fs.readFile(usersFilePath, 'utf8'));
     } catch (error) {
-        return interaction.reply({ content: 'Erro ao ler o arquivo de usuários.', flags: [MessageFlags.Ephemeral] });
+        return interaction.reply({ content: 'Error reading user file.', flags: [MessageFlags.Ephemeral] }); // Translated
     }
 
     const getLbUsername = (discordUser) => {
@@ -51,11 +51,11 @@ export async function execute(interaction) {
     const lbUser1 = getLbUsername(user1);
     const lbUser2 = getLbUsername(user2);
 
-    if (!lbUser1) return interaction.reply({ content: `O usuário ${user1.displayName} não vinculou uma conta.`, flags: [MessageFlags.Ephemeral] });
-    if (!lbUser2) return interaction.reply({ content: `O usuário ${user2.displayName} não vinculou uma conta.`, flags: [MessageFlags.Ephemeral] });
+    if (!lbUser1) return interaction.reply({ content: `User ${user1.displayName} has not linked an account.`, flags: [MessageFlags.Ephemeral] }); // Translated
+    if (!lbUser2) return interaction.reply({ content: `User ${user2.displayName} has not linked an account.`, flags: [MessageFlags.Ephemeral] }); // Translated
 
     await interaction.deferReply();
-    await interaction.editReply(`Buscando e comparando os diários de **${lbUser1}** e **${lbUser2}**. Isso pode levar alguns minutos...`);
+    await interaction.editReply(`Fetching and comparing diaries of **${lbUser1}** and **${lbUser2}**. This may take a few minutes...`); // Translated
 
     try {
         const [diary1, diary2] = await Promise.all([
@@ -64,7 +64,7 @@ export async function execute(interaction) {
         ]);
 
         if (diary1.length === 0 || diary2.length === 0) {
-            return interaction.editReply('Um ou ambos os usuários não possuem filmes no diário.');
+            return interaction.editReply('One or both users have no movies in their diary.'); // Translated
         }
 
         const diary2Slugs = new Map(diary2.map(film => [film.slug, film]));
@@ -78,7 +78,7 @@ export async function execute(interaction) {
         }
 
         if (commonFilms.length === 0) {
-            return interaction.editReply(`Nenhum filme em comum encontrado entre **${lbUser1}** e **${lbUser2}**.`);
+            return interaction.editReply(`No common movies found between **${lbUser1}** and **${lbUser2}**.`); // Translated
         }
 
         let currentPage = 0;
@@ -96,7 +96,7 @@ export async function execute(interaction) {
 
         collector.on('collect', async i => {
             if (i.user.id !== interaction.user.id) {
-                return i.reply({ content: 'Apenas quem iniciou o comando pode navegar pelas páginas.', ephemeral: true });
+                return i.reply({ content: 'Only the command initiator can navigate through pages.', ephemeral: true }); // Translated
             }
 
             if (i.customId === 'prev_page') currentPage--;
@@ -113,8 +113,8 @@ export async function execute(interaction) {
         });
 
     } catch (error) {
-        console.error('Erro no comando /compare:', error);
-        await interaction.editReply({ content: `Ocorreu um erro ao comparar os diários: ${error.message}` });
+        console.error('Error in /compare command:', error); // Translated
+        await interaction.editReply({ content: `An error occurred while comparing diaries: ${error.message}` }); // Translated
     }
 }
 
@@ -130,16 +130,16 @@ function generateCompareEmbed(page, totalPages, commonFilms, user1, user2) {
     };
 
     const filmListString = pageItems
-        .map(film => `• **[${film.title} (${film.year || '????'})](https://letterboxd.com/film/${film.slug}/)**\n  └ ${user1.displayName}: ${formatRating(film.rating1)} | ${user2.displayName}: ${formatRating(film.rating2)}`)
+        .map(film => `• **[${film.title} (${film.year || '????'})](https://letterboxd.com/film/${film.slug}/)**\n  └ ${user1.displayName}: ${formatRating(film.rating1)} | ${user2.displayName}: ${formatRating(film.rating2)}`)
         .join('\n\n');
 
-    const description = `**Mutuals: ${commonFilms.length}**\n\n${filmListString}`;
+    const description = `**Mutuals: ${commonFilms.length}**\n\n${filmListString}`; // Translated
 
     return new EmbedBuilder()
         .setColor(0x00E054)
-        .setTitle(`Comparando ${user1.displayName} e ${user2.displayName}`)
+        .setTitle(`Comparing ${user1.displayName} and ${user2.displayName}`) // Translated
         .setDescription(description)
-        .setFooter({ text: `Página ${page + 1} de ${totalPages}` });
+        .setFooter({ text: `Page ${page + 1} of ${totalPages}` }); // Translated
 }
 
 function generateButtons(page, totalPages, disabled = false) {

@@ -11,7 +11,7 @@ const usersFilePath = path.join(__dirname, '..', 'storage', 'users.json');
 
 export const data = new SlashCommandBuilder()
     .setName('sync')
-    .setDescription('Sincroniza seu diário do Letterboxd com o bot para o ranking do servidor.');
+    .setDescription('Synchronizes your Letterboxd diary with the bot for the server ranking.');
 
 export async function execute(interaction) {
     const user = interaction.user;
@@ -25,33 +25,37 @@ export async function execute(interaction) {
 
     let userEntry = usersData[user.id];
     if (!userEntry) {
-        return interaction.reply({ content: 'Você precisa vincular sua conta com /link antes de sincronizar.', flags: [MessageFlags.Ephemeral] });
+        return interaction.reply({ content: 'You need to link your account with /link before synchronizing.', flags: [MessageFlags.Ephemeral] });
     } 
-    // Garante que userEntry seja um objeto, caso ainda esteja no formato string
+    // Ensure userEntry is an object, if it's still in string format
     if (typeof userEntry === 'string') {
         userEntry = { letterboxd: userEntry, last_sync_date: null };
-        usersData[user.id] = userEntry; // Atualiza em usersData também
+        usersData[user.id] = userEntry; // Update in usersData as well
     }
 
     const letterboxdUsername = userEntry.letterboxd;
+    const guildId = interaction.guildId; // Get the guild ID
+
+    if (!guildId) {
+        await interaction.editReply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
+        return;
+    }
 
     if (!letterboxdUsername) {
-        return interaction.reply({ content: 'Você precisa vincular sua conta com /link antes de sincronizar.', flags: [MessageFlags.Ephemeral] });
+        return interaction.reply({ content: 'You need to link your account with /link before synchronizing.', flags: [MessageFlags.Ephemeral] });
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
-        console.log(`[Sync Command] Iniciando sincronização completa para ${user.id}...`);
+        console.log(`[Sync Command] Starting full synchronization for ${user.id} in guild ${guildId}...`);
 
-        await interaction.editReply('Iniciando sincronização completa... Estou lendo todo o seu diário do Letterboxd. Isso pode levar vários minutos!');
+        await interaction.editReply('Starting full synchronization... I\'m reading your entire Letterboxd diary. This may take several minutes!');
         
-        // getFullDiary não recebe lastSyncDate como filtro, ele busca tudo
         const diaryEntries = await getFullDiary(letterboxdUsername);
 
         if (!diaryEntries || diaryEntries.length === 0) {
-            await interaction.editReply('Seu diário do Letterboxd parece estar vazio. Nada para sincronizar...');
-            // Ainda atualiza o last_sync_date mesmo que não haja novas entradas para processar
+            await interaction.editReply('Your Letterboxd diary appears to be empty. Nothing to synchronize...');
             userEntry.last_sync_date = new Date().toISOString();
             await fs.writeFile(usersFilePath, JSON.stringify(usersData, null, 4));
             return;
@@ -61,43 +65,41 @@ export async function execute(interaction) {
         let skippedEntriesCount = 0;
         let newEntriesFound = 0;
 
-        // Filtra as entradas, verificando se já existem no banco de dados usando o viewing_id
         for (const entry of diaryEntries) {
-            const exists = await checkIfEntryExists(user.id, letterboxdUsername, entry.viewing_id); 
+            // Pass guildId to checkIfEntryExists
+            const exists = await checkIfEntryExists(user.id, letterboxdUsername, entry.viewing_id, guildId); 
             if (!exists) {
                 entriesToSave.push({
                     ...entry,
                     discord_id: user.id,
                     letterboxd_username: letterboxdUsername,
+                    guild_id: guildId // NEW: Pass guild_id here
                 });
                 newEntriesFound++;
             } else {
                 skippedEntriesCount++;
-                // console.log(`[Sync Command Debug] Entrada já existe no DB (viewing_id: ${entry.viewing_id}), pulando: ${entry.title} (${entry.date})`); 
+                // console.log(`[Sync Command Debug] Entry already exists in DB (viewing_id: ${entry.viewing_id}), skipping: ${entry.title} (${entry.date})`); 
             }
         }
 
         if (entriesToSave.length === 0) {
-            // MENSAGEM AJUSTADA
-            await interaction.editReply('Você ainda não assistiu filmes novos...');
-            // Atualiza o last_sync_date mesmo que não haja novas entradas
+            await interaction.editReply('You haven\'t watched any new movies.');
             userEntry.last_sync_date = new Date().toISOString();
             await fs.writeFile(usersFilePath, JSON.stringify(usersData, null, 4));
             return;
         }
 
-        await interaction.editReply(`Encontrei ${newEntriesFound} novos filmes :D`);
+        await interaction.editReply(`Found ${newEntriesFound} new movies :D`);
 
         const { changes } = await saveDiaryEntries(entriesToSave);
         
-        // Atualiza o last_sync_date após a sincronização
         userEntry.last_sync_date = new Date().toISOString();
         await fs.writeFile(usersFilePath, JSON.stringify(usersData, null, 4));
         
-        await interaction.editReply(`Sincronização concluída! ${changes} filmes adicionados. (${skippedEntriesCount+changes} Filmes assistidos).`);
+        await interaction.editReply(`Synchronization complete! ${changes} movies added.`);
 
     } catch (error) {
-        console.error('Erro durante o /sync:', error);
-        await interaction.editReply(`Ocorreu um erro durante a sincronização: ${error.message}`);
+        console.error('Error during /sync:', error);
+        await interaction.editReply(`An error occurred during synchronization: ${error.message}`);
     }
 }
