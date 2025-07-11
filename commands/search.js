@@ -1,5 +1,3 @@
-// commands/search.js
-
 import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType } from 'discord.js';
 import { searchLetterboxd, getDirectorFilms } from '../scraper/searchLetterboxd.js';
 // Importamos as novas funções da API
@@ -62,7 +60,8 @@ export async function execute(interaction) {
     });
 
     collector.on('collect', async i => {
-        await i.update({ content: 'Buscando informações...', components: [] });
+        // MUDANÇA AQUI: Mensagem de "Buscando informações..." para "Aqui está!"
+        await i.update({ content: 'Aqui está!', components: [] }); 
 
         const selectedValue = i.values[0];
         const [type, ...rest] = selectedValue.split(/_(.*)/s);

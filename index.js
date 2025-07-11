@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url'; 
+import { checkDailyWatchedFilms } from './tasks/dailyWatchedChecker.js'; // Importa a nova função
 
 dotenv.config();
 
@@ -43,9 +44,19 @@ for (const file of commandFiles) {
     }
 }
 
-client.once('ready', () => {
-    console.log(`Bot conectado! Logado como ${client.user.tag}`);
+client.once('ready', c => {
+    console.log(`Bot conectado! Logado como ${c.user.tag}`);
     console.log(`Estou em ${client.guilds.cache.size} servidores.`);
+
+    // Agendamento da tarefa de verificação diária
+    // A cada 20 minutos (1200000 ms)
+    // Ajuste o intervalo conforme a sua preferência e número de usuários
+    setInterval(() => {
+        checkDailyWatchedFilms(client);
+    }, 20 * 60 * 1000); // 20 minutos (20 * 60 segundos * 1000 milissegundos)
+
+    // Executa uma vez ao iniciar para pegar filmes assistidos desde a última vez que o bot estava offline
+    checkDailyWatchedFilms(client); 
 });
 
 client.on('interactionCreate', async interaction => {
@@ -62,7 +73,6 @@ client.on('interactionCreate', async interaction => {
         await command.execute(interaction);
     } catch (error) {
         console.error(error);
-        // >>> MUDANÇA AQUI: Usando MessageFlags.Ephemeral
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content: 'Ocorreu um erro ao executar este comando!', flags: MessageFlags.Ephemeral });
         } else {

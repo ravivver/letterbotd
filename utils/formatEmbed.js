@@ -2,7 +2,7 @@
 
 import { EmbedBuilder, AttachmentBuilder } from 'discord.js';
 import { getTmdbPosterUrl } from '../api/tmdb.js';
-import sharp from 'sharp';
+import sharp from 'sharp'; // Usando sharp
 import axios from 'axios';
 
 // --- FUNÇÕES AUXILIARES ---
@@ -52,26 +52,18 @@ function convertRatingToStars(rating) {
         stars += '½';
     }
     
-    // Removido o preenchimento com estrelas vazias para um visual mais limpo.
     return stars;
 }
 
 
 // --- FUNÇÕES DE CRIAÇÃO DE EMBED ---
 
-/**
- * Cria um embed formatado para exibir o último filme assistido no diário.
- * @param {Object} latestFilm Detalhes do filme do Letterboxd (do getDiary.js).
- * @param {Object} tmdbDetails Detalhes do filme do TMDB (do api/tmdb.js).
- * @param {string} letterboxdUsername Nome de usuário do Letterboxd.
- * @returns {EmbedBuilder} O Embed formatado.
- */
 async function createDiaryEmbed(latestFilm, tmdbDetails, letterboxdUsername) {
     const embed = new EmbedBuilder()
         .setColor(0xFFFF00) // Amarelo
         .setURL(latestFilm.url);
 
-    const embedTitle = `Último Filme de ${letterboxdUsername} 🎬`;
+    const embedTitle = `Último Filme de ${letterboxdUsername} �`;
     embed.setTitle(embedTitle);
 
     let description = `**Filme:** ${latestFilm.title} (${latestFilm.year})\n`;
@@ -110,13 +102,6 @@ async function createDiaryEmbed(latestFilm, tmdbDetails, letterboxdUsername) {
     return embed;
 }
 
-/**
- * Cria um embed formatado para exibir a última review.
- * @param {Object} reviewDetails Detalhes da review do Letterboxd (do getReview.js).
- * @param {Object} tmdbDetails Detalhes do filme do TMDB (do api/tmdb.js).
- * @param {string} letterboxdUsername Nome de usuário do Letterboxd.
- * @returns {EmbedBuilder} O Embed formatado.
- */
 async function createReviewEmbed(reviewDetails, tmdbDetails, letterboxdUsername) {
     const embed = new EmbedBuilder()
         .setColor(0xAA00AA) // Cor Roxa para reviews
@@ -154,13 +139,6 @@ async function createReviewEmbed(reviewDetails, tmdbDetails, letterboxdUsername)
     return embed;
 }
 
-/**
- * Cria um embed formatado para exibir todos os filmes assistidos em um dia específico.
- * @param {Array<Object>} filmsDoDia Lista de filmes assistidos no dia (do getDiary.js).
- * @param {string} letterboxdUsername Nome de usuário do Letterboxd.
- * @param {string} displayDate A data formatada para exibição (ex: "09 Jul 25").
- * @returns {EmbedBuilder} O Embed formatado.
- */
 async function createDailyDiaryEmbed(filmsDoDia, letterboxdUsername, displayDate) {
     const embed = new EmbedBuilder()
         .setColor(0x00FF00) // Uma cor verde para o diário diário, para diferenciar
@@ -170,11 +148,11 @@ async function createDailyDiaryEmbed(filmsDoDia, letterboxdUsername, displayDate
     if (filmsDoDia.length > 0) {
         for (const filmData of filmsDoDia) {
             description += `**- ${filmData.title}** (${filmData.year})\n`;
-            description += `  Nota: ${convertRatingToStars(filmData.rating)}\n`;
+            description += `  Nota: ${convertRatingToStars(filmData.rating)}\n`;
             if (filmData.tmdbDetails) {
-                description += `  Gêneros (TMDB): ${filmData.tmdbDetails.genres?.join(', ') || 'N/A'}\n`;
+                description += `  Gêneros (TMDB): ${filmData.tmdbDetails.genres?.join(', ') || 'N/A'}\n`;
             }
-            description += `  [Ver no Letterboxd](${filmData.url})\n\n`;
+            description += `  [Ver no Letterboxd](${filmData.url})\n\n`;
         }
     } else {
         description = `Nenhum filme assistido nesta data.`;
@@ -190,12 +168,6 @@ async function createDailyDiaryEmbed(filmsDoDia, letterboxdUsername, displayDate
     return embed;
 }
 
-/**
- * Cria um embed com uma grade 2x2 dos pôsteres dos filmes favoritos.
- * @param {Array<Object>} favoriteFilms Array de objetos de filmes favoritos com detalhes TMDB.
- * @param {string} letterboxdUsername Nome de usuário do Letterboxd.
- * @returns {Promise<Object>} Um objeto contendo o EmbedBuilder e o AttachmentBuilder (a imagem).
- */
 async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
     const embed = new EmbedBuilder()
         .setColor(0xFF00FF) // Uma cor vibrante para favoritos (ex: magenta)
@@ -204,14 +176,11 @@ async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
     let attachment = null;
     let imageFailureMessage = '';
 
-    // --- ALTERAÇÃO AQUI: Adicionando o hyperlink ---
-    // Usamos o film.slug para criar o link para cada filme.
     const filmListDescription = favoriteFilms.map((film, index) =>
         `${index + 1}. **[${film.title} (${film.year})](https://letterboxd.com/film/${film.slug}/)**`
     ).join('\n');
     embed.setDescription(filmListDescription);
 
-    // O resto da função para gerar a imagem da grade continua o mesmo
     const posterUrls = favoriteFilms.map(film =>
         film.tmdbDetails?.poster_path ? getTmdbPosterUrl(film.tmdbDetails.poster_path, 'w342') : null
     ).filter(url => url !== null);
@@ -263,46 +232,50 @@ async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
     return { embed, attachment };
 }
 
-
-// --- VERSÃO FINAL DA FUNÇÃO createLikesGridImage ---
+// --- VERSÃO FINAL DA FUNÇÃO createLikesGridImage (AGORA GENÉRICA PARA GRADES) ---
 /**
- * Cria um embed e uma imagem de grade para os filmes curtidos.
+ * Cria um embed e uma imagem de grade para filmes.
  * Suporta hyperlinks e grades incompletas com fundo transparente.
+ * Esta função será usada para "Likes" e "Filmes Assistidos".
+ * @param {Array<Object>} films Array de objetos de filmes com slug, title, year, posterUrl.
+ * @param {string} gridTitle O título da grade (ex: "Filmes Curtidos de X", "Filmes Assistidos Hoje por Y").
+ * @param {number} cols Número de colunas.
+ * @param {number} rows Número de linhas.
+ * @returns {Promise<Object>} Um objeto contendo o EmbedBuilder e o AttachmentBuilder (a imagem).
  */
-async function createLikesGridImage(films, username, cols, rows) {
+async function createGridImage(films, gridTitle, cols, rows) {
     const embed = new EmbedBuilder()
-        .setColor(0x00BFFF)
-        .setTitle(`❤️ Grade de Filmes Curtidos de ${username}`);
+        .setColor(0x6f52e3) // Cor roxa
+        .setTitle(`Grade de ${gridTitle}`); // Título dinâmico
 
     let attachment = null;
     const requiredFilms = cols * rows;
 
     // LÓGICA DE HYPERLINKS
+    // Garante que title e year não sejam undefined no texto
     const filmListDescription = films
-        .map((film, index) => `${index + 1}. **[${film.title} (${film.year || '????'})](https://letterboxd.com/film/${film.slug}/)**`)
+        .map((film, index) => `${index + 1}. **[${film.title || 'Filme Desconhecido'} (${film.year || '????'})](https://letterboxd.com/film/${film.slug}/)**`)
         .join('\n');
     embed.setDescription(filmListDescription);
 
-    const posterUrls = films.map(film => film.posterUrl);
-
-    // Preenche a lista com 'null' para os espaços que ficarão vazios
-    while (posterUrls.length < requiredFilms) {
-        posterUrls.push(null);
-    }
-    
     // Baixa os pôsteres. Se falhar ou for null, o resultado será null.
-    const posterBuffers = await Promise.all(
-        posterUrls.map(async (url) => {
-            if (!url) return null; // Para espaços vazios intencionais
-            try {
-                const response = await axios.get(url, { responseType: 'arraybuffer' });
-                return response.data;
-            } catch (error) {
-                console.error(`Erro ao baixar pôster de ${url}:`, error.message);
-                return null; // Trata erro de download como um espaço vazio também
-            }
-        })
-    );
+    // Preenche a lista com 'null' para os espaços que ficarão vazios
+    const posterPromises = [];
+    for (let i = 0; i < requiredFilms; i++) {
+        const film = films[i]; // Pode ser undefined se houver menos filmes que requiredFilms
+        if (film && film.posterUrl) {
+            posterPromises.push(axios.get(film.posterUrl, { responseType: 'arraybuffer' })
+                .then(response => response.data)
+                .catch(error => {
+                    console.error(`Erro ao baixar pôster para ${film.title} (${film.posterUrl}):`, error.message);
+                    return null; // Trata erro de download como um espaço vazio
+                })
+            );
+        } else {
+            posterPromises.push(Promise.resolve(null)); // Para espaços vazios intencionais
+        }
+    }
+    const posterBuffers = await Promise.all(posterPromises);
 
     const posterWidth = 150;
     const posterHeight = 225;
@@ -310,29 +283,27 @@ async function createLikesGridImage(films, username, cols, rows) {
     const outputWidth = cols * posterWidth + (cols - 1) * gap;
     const outputHeight = rows * posterHeight + (rows - 1) * gap;
 
-    const resizedPosterBuffers = await Promise.all(
-        posterBuffers.map(buffer => buffer ? sharp(buffer).resize(posterWidth, posterHeight).toBuffer() : null)
-    );
-    
-    const compositeImages = resizedPosterBuffers
-        .map((buffer, i) => {
-            if (!buffer) return null;
-            return {
-                input: buffer,
+    const compositeImages = [];
+    for (let i = 0; i < requiredFilms; i++) {
+        const buffer = posterBuffers[i];
+        if (buffer) {
+            compositeImages.push({
+                input: await sharp(buffer).resize(posterWidth, posterHeight).toBuffer(),
                 left: Math.floor(i % cols) * (posterWidth + gap),
                 top: Math.floor(i / cols) * (posterHeight + gap)
-            };
-        })
-        .filter(item => item !== null); // Remove os nulos para não tentar compor um espaço vazio
-
+            });
+        }
+        // Se o buffer for null (pôster ausente ou erro), não adicionamos nada para sharp
+        // O fundo transparente já cuidará do espaço vazio.
+    }
+    
     try {
         const combinedImageBuffer = await sharp({
             create: {
                 width: outputWidth,
                 height: outputHeight,
                 channels: 4,
-                // FUNDO TOTALMENTE TRANSPARENTE
-                background: { r: 0, g: 0, b: 0, alpha: 0 } 
+                background: { r: 0, g: 0, b: 0, alpha: 0 } // Fundo totalmente transparente
             }
         })
         .composite(compositeImages)
@@ -347,12 +318,7 @@ async function createLikesGridImage(films, username, cols, rows) {
     return { embed, attachment };
 }
 
-/**
- * Cria um embed formatado para exibir as estatísticas do perfil de um usuário Letterboxd.
- * @param {Object} profileStats Objeto com as estatísticas do perfil (do getProfileStats.js).
- * @param {string} username O nome de usuário do Letterboxd.
- * @returns {EmbedBuilder} O Embed formatado.
- */
+
 async function createProfileEmbed(profileStats, username) {
     const embed = new EmbedBuilder()
         .setColor(0xFFFFFF) // Cor branca (0xFFFFFF)
@@ -447,7 +413,7 @@ export {
     createReviewEmbed,
     createDailyDiaryEmbed,
     createFavoritesEmbed,
-    createLikesGridImage,
+    createGridImage, // Exporta a função genérica de grid
     createProfileEmbed,
     formatDateBr,
     convertRatingToStars
