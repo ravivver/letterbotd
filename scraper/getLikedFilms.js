@@ -4,14 +4,14 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 /**
- * Scrapeia os filmes curtidos (likes) de um usuário do Letterboxd, navegando por todas as páginas.
- * @param {string} username O nome de usuário do Letterboxd.
- * @returns {Promise<Array<Object>>} Uma array de objetos, cada um com o slug e URL do filme curtido.
- * Retorna uma array vazia se nenhum like for encontrado, o perfil for privado ou o usuário não existir.
+ * Scrapes a user's liked films from Letterboxd, navigating through all pages.
+ * @param {string} username The Letterboxd username.
+ * @returns {Promise<Array<Object>>} An array of objects, each with the film's slug and URL.
+ * Returns an empty array if no likes are found, the profile is private, or the user does not exist.
  */
 async function getLikedFilms(username) {
     if (!username) {
-        throw new Error('Nome de usuário do Letterboxd é obrigatório.');
+        throw new Error('Letterboxd username is required.'); // Translated
     }
 
     let allLikedFilms = [];
@@ -21,7 +21,7 @@ async function getLikedFilms(username) {
     try {
         while (hasNextPage) {
             const url = `https://letterboxd.com/${username}/likes/films/page/${currentPage}/`;
-            console.log(`[Scraper - Likes] Buscando filmes curtidos da página ${currentPage} para ${username}...`);
+            console.log(`[Scraper - Likes] Fetching liked films from page ${currentPage} for ${username}...`); // Translated
 
             const response = await axios.get(url, {
                 headers: {
@@ -34,13 +34,13 @@ async function getLikedFilms(username) {
 
             const $ = cheerio.load(response.data);
 
-            // --- Verificações de Erro na Página ---
+            // --- Page Error Checks ---
             const pageTitle = $('title').text();
             const mainContent = $('#content').text();
 
             if (mainContent.includes('Sorry, we can’t find the page you’ve requested.')) {
                 if (currentPage === 1) {
-                    throw new Error('Usuário Letterboxd não encontrado.');
+                    throw new Error('Letterboxd user not found.'); // Translated
                 } else {
                     hasNextPage = false;
                     break;
@@ -48,20 +48,18 @@ async function getLikedFilms(username) {
             }
 
             if (pageTitle.includes('Profile is Private') || mainContent.includes('This profile is private')) {
-                throw new Error('Perfil Letterboxd é privado. Não é possível acessar os filmes curtidos.');
+                throw new Error('Letterboxd profile is private. Cannot access liked films.'); // Translated
             }
 
             if (response.status === 404 && currentPage === 1) {
-                throw new Error('A página do Letterboxd retornou um erro 404 inesperado na primeira tentativa.');
+                throw new Error('The Letterboxd page returned an unexpected 404 error on the first attempt.'); // Translated
             }
-            // --- Fim das Verificações de Erro ---
+            // --- End of Page Error Checks ---
 
-            // --- NOVO SELETOR PRECISO COM BASE NO HTML FORNECIDO ---
-            // Seleciona a div com as classes 'poster' e 'film-poster' que contém os atributos data-
             const likedFilmElements = $('ul.poster-list li .poster.film-poster[data-film-slug]');
 
             if (!likedFilmElements.length && currentPage === 1) {
-                console.log(`[Scraper - Likes] Nenhuma filme curtido encontrado na página 1 para "${username}" com o seletor atual.`);
+                console.log(`[Scraper - Likes] No liked films found on page 1 for "${username}" with the current selector.`); // Translated
                 return [];
             } else if (!likedFilmElements.length && currentPage > 1) {
                 hasNextPage = false;
@@ -69,12 +67,11 @@ async function getLikedFilms(username) {
             }
 
             likedFilmElements.each((i, element) => {
-                const entry = $(element); // 'entry' agora é a div com as classes 'poster film-poster' e os atributos data-
+                const entry = $(element);
 
                 const filmSlug = entry.attr('data-film-slug') || null;
                 const filmUrlLetterboxd = filmSlug ? `https://letterboxd.com/film/${filmSlug}/` : 'N/A';
 
-                // Usar data-film-name para obter Título e Ano
                 let filmTitle = 'N/A';
                 let filmYear = null;
                 const dataFilmName = entry.attr('data-film-name');
@@ -84,25 +81,24 @@ async function getLikedFilms(username) {
                         filmTitle = match[1].trim();
                         filmYear = parseInt(match[2]);
                     } else {
-                        filmTitle = dataFilmName.trim(); // Se não tiver ano, pega só o nome
+                        filmTitle = dataFilmName.trim(); 
                     }
                 } else {
-                    // Fallback para alt da imagem se data-film-name não estiver presente
                     const imgElement = entry.find('img.image');
                     if (imgElement.length) {
                         filmTitle = imgElement.attr('alt') || 'N/A';
                     }
                 }
 
-                if (filmSlug) { // Só adiciona se tiver um slug válido
+                if (filmSlug) { 
                     allLikedFilms.push({
-                        title: filmTitle, // Agora deve vir de data-film-name ou alt
-                        year: filmYear,   // Agora deve vir de data-film-name (se presente)
-                        slug: filmSlug,   // Vindo de data-film-slug
+                        title: filmTitle, 
+                        year: filmYear,   
+                        slug: filmSlug,   
                         url: filmUrlLetterboxd
                     });
                 } else {
-                    console.log(`[Scraper - Likes] Aviso: Slug não encontrado para um filme curtido na página ${currentPage}. Entrada: ${entry.html().substring(0, 100)}...`);
+                    console.log(`[Scraper - Likes] Warning: Slug not found for a liked film on page ${currentPage}. Entry: ${entry.html().substring(0, 100)}...`); // Translated
                 }
             });
 
@@ -127,13 +123,13 @@ async function getLikedFilms(username) {
 
     } catch (error) {
         if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'UND_ERR_SOCKET') {
-            throw new Error('Não foi possível conectar ao Letterboxd. Verifique sua conexão com a internet.');
+            throw new Error('Could not connect to Letterboxd. Check your internet connection.'); // Translated
         }
-        if (error.message.includes('Perfil Letterboxd é privado') || error.message.includes('Usuário Letterboxd não encontrado')) {
+        if (error.message.includes('Profile is Private') || error.message.includes('User not found')) { // Translated
             throw error;
         }
-        console.error(`Erro inesperado ao raspar filmes curtidos do usuário ${username}:`, error.message);
-        throw new Error(`Ocorreu um erro inesperado ao buscar os filmes curtidos de ${username}. Tente novamente mais tarde. Detalhes: ${error.message}`);
+        console.error(`Unexpected error scraping user liked films for ${username}:`, error.message); // Translated
+        throw new Error(`An unexpected error occurred while fetching ${username}'s liked films. Please try again later. Details: ${error.message}`); // Translated
     }
 }
 

@@ -1,11 +1,11 @@
-// scraper/getFavorites.js - VERSÃO FINAL PARA PEGAR SLUG E NOME DOS ATRIBUTOS DATA-
+// scraper/getFavorites.js - FINAL VERSION TO GET SLUG AND DATA ATTRIBUTES - Translated to English
 
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 async function getFavorites(username) {
     if (!username) {
-        throw new Error('Nome de usuário do Letterboxd é obrigatório.');
+        throw new Error('Letterboxd username is required.'); // Translated
     }
 
     const url = `https://letterboxd.com/${username}/`;
@@ -23,53 +23,53 @@ async function getFavorites(username) {
 
         const $ = cheerio.load(response.data);
 
-        // --- Verificações de Erro na Página ---
+        // --- Page Error Checks ---
         const pageTitle = $('title').text();
         const mainContent = $('#content').text();
 
         if (mainContent.includes('Sorry, we can’t find the page you’ve requested.')) {
-            throw new Error('Usuário Letterboxd não encontrado.');
+            throw new Error('Letterboxd user not found.'); // Translated
         }
 
         if (pageTitle.includes('Profile is Private') || mainContent.includes('This profile is private')) {
-            throw new Error('Perfil Letterboxd é privado. Não é possível acessar os favoritos.');
+            throw new Error('Letterboxd profile is private. Cannot access favorites.'); // Translated
         }
 
         if (response.status === 404) {
-            throw new Error('A página do Letterboxd retornou um erro 404 inesperado.');
+            throw new Error('The Letterboxd page returned an unexpected 404 error.'); // Translated
         }
-        // --- Fim das Verificações de Erro na Página ---
+        // --- End of Page Error Checks ---
 
         const favoritesSection = $('#favourites');
         if (!favoritesSection.length) {
-            console.log('Debug Favorites: Seção #favourites não encontrada. O usuário pode não ter favoritos.');
+            console.log('Debug Favorites: #favourites section not found. User may not have favorites.'); // Translated
             return [];
         }
 
         const favoriteFilmElements = favoritesSection.find('.poster-list li.favourite-film-poster-container');
 
         if (!favoriteFilmElements.length) {
-            console.log('Debug Favorites: Nenhum elemento de filme favorito (.poster-list li.favourite-film-poster-container) encontrado. A seção de favoritos pode estar vazia ou os seletores iniciais estão incorretos.');
+            console.log('Debug Favorites: No favorite film elements (.poster-list li.favourite-film-poster-container) found. Favorites section might be empty or initial selectors are incorrect.'); // Translated
             return [];
         }
 
         favoriteFilmElements.slice(0, 4).each((i, element) => {
             const entry = $(element);
-            console.log(`Debug Favorites ${i}: Processando entrada...`);
+            console.log(`Debug Favorites ${i}: Processing entry...`); // Translated
 
             let filmTitle = 'N/A';
             let filmYear = null;
             let filmSlug = null;
             let filmUrlLetterboxd = 'N/A';
 
-            // --- TENTATIVA PRIMÁRIA E AGRESSIVA: Encontrar data-film-slug e data-film-name ---
-            // Primeiro no próprio LI
+            // --- PRIMARY AND AGGRESSIVE ATTEMPT: Find data-film-slug and data-film-name ---
+            // First on the LI itself
             filmSlug = entry.attr('data-film-slug') || null;
             let currentFilmName = entry.attr('data-film-name') || null;
 
-            // Se não encontrou no LI, procurar em qualquer descendente
+            // If not found on LI, search in any descendant
             if (!filmSlug || !currentFilmName) {
-                const descendantWithData = entry.find('[data-film-slug], [data-film-name]').first(); // Pega o primeiro que encontrar
+                const descendantWithData = entry.find('[data-film-slug], [data-film-name]').first(); 
                 if (descendantWithData.length) {
                     filmSlug = filmSlug || descendantWithData.attr('data-film-slug') || null;
                     currentFilmName = currentFilmName || descendantWithData.attr('data-film-name') || null;
@@ -78,9 +78,9 @@ async function getFavorites(username) {
 
             if (filmSlug) {
                 filmUrlLetterboxd = `https://letterboxd.com/film/${filmSlug}/`;
-                console.log(`Debug Favorites ${i}: Slug encontrado: ${filmSlug}`);
+                console.log(`Debug Favorites ${i}: Slug found: ${filmSlug}`); // Translated
             } else {
-                console.log(`Debug Favorites ${i}: Slug NÃO encontrado após todas as tentativas.`);
+                console.log(`Debug Favorites ${i}: Slug NOT found after all attempts.`); // Translated
             }
 
             if (currentFilmName) {
@@ -88,56 +88,55 @@ async function getFavorites(username) {
                 if (match) {
                     filmTitle = match[1].trim();
                     filmYear = parseInt(match[2]);
-                    console.log(`Debug Favorites ${i}: Título/Ano de data-film-name: ${filmTitle} (${filmYear})`);
+                    console.log(`Debug Favorites ${i}: Title/Year from data-film-name: ${filmTitle} (${filmYear})`); // Translated
                 } else {
                     filmTitle = currentFilmName.trim();
-                    console.log(`Debug Favorites ${i}: Título de data-film-name (sem ano): ${filmTitle}`);
+                    console.log(`Debug Favorites ${i}: Title from data-film-name (no year): ${filmTitle}`); // Translated
                 }
             } else {
-                console.log(`Debug Favorites ${i}: Atributo data-film-name NÃO encontrado.`);
+                console.log(`Debug Favorites ${i}: data-film-name attribute NOT found.`); // Translated
             }
-            // --- FIM DA EXTRAÇÃO DE ATRIBUTOS DATA- ---
+            // --- END OF DATA ATTRIBUTE EXTRACTION ---
 
 
-            // --- FALLBACK para TÍTULO (usando alt da imagem, se necessário) ---
-            if (filmTitle === 'N/A') { // Se o título ainda não foi pego de data-film-name
+            // --- FALLBACK for TITLE (using image alt, if necessary) ---
+            if (filmTitle === 'N/A') { 
                 const imgElement = entry.find('.film-poster img.image');
                 if (imgElement.length) {
                     const altText = imgElement.attr('alt');
                     if (altText) {
                         filmTitle = altText.trim();
-                        console.log(`Debug Favorites ${i}: Título extraído do alt da imagem (fallback): ${filmTitle}`);
+                        console.log(`Debug Favorites ${i}: Title extracted from image alt (fallback): ${filmTitle}`); // Translated
                     }
                 }
             }
-            // O ano será pego do getFilmDetailsFromSlug
 
-            // --- Log final para ver o que foi obtido para esta entrada ---
-            console.log(`Debug Favorites ${i}: Resultado final (slug para próxima etapa) -> Título provisório: "${filmTitle}", Slug: "${filmSlug}", URL: "${filmUrlLetterboxd}"`);
+            // --- Final log to see what was obtained for this entry ---
+            console.log(`Debug Favorites ${i}: Final result (slug for next step) -> Provisional Title: "${filmTitle}", Slug: "${filmSlug}", URL: "${filmUrlLetterboxd}"`); // Translated
 
             favoriteFilms.push({
-                title: filmTitle, // Título provisório, será refinado depois
-                year: filmYear,   // Ano provisório, será refinado depois
-                slug: filmSlug,   // ESSENCIAL para a próxima etapa
+                title: filmTitle, 
+                year: filmYear,   
+                slug: filmSlug,   
                 url: filmUrlLetterboxd
             });
         });
 
         if (favoriteFilms.length === 0) {
-            console.log(`Debug: Nenhuma filme favorito processado para "${username}". Verifique os seletores ou se o usuário realmente tem favoritos.`);
+            console.log(`Debug: No favorite film processed for "${username}". Check selectors or if the user actually has favorites.`); // Translated
         }
 
         return favoriteFilms;
 
     } catch (error) {
         if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'UND_ERR_SOCKET') {
-            throw new Error('Não foi possível conectar ao Letterboxd. Verifique sua conexão com a internet.');
+            throw new Error('Could not connect to Letterboxd. Check your internet connection.'); // Translated
         }
-        if (error.message.includes('Perfil Letterboxd é privado') || error.message.includes('Usuário Letterboxd não encontrado')) {
+        if (error.message.includes('Profile is Private') || error.message.includes('User not found')) { // Translated
             throw error;
         }
-        console.error(`Erro inesperado ao raspar favoritos do usuário ${username}:`, error.message);
-        throw new Error(`Ocorreu um erro inesperado ao buscar os filmes favoritos de ${username}. Tente novamente mais tarde. Detalhes: ${error.message}`);
+        console.error(`Unexpected error scraping user favorites for ${username}:`, error.message); // Translated
+        throw new Error(`An unexpected error occurred while fetching ${username}'s favorite movies. Please try again later. Details: ${error.message}`); // Translated
     }
 }
 

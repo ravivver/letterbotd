@@ -4,13 +4,13 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 /**
- * Scrapeia detalhes de um filme específico a partir de sua página no Letterboxd.
- * @param {string} filmSlug O slug do filme (ex: "eyes-wide-shut").
- * @returns {Promise<Object|null>} Um objeto com os detalhes do filme, ou null se não for encontrado/erro.
+ * Scrapes details of a specific film from its Letterboxd page.
+ * @param {string} filmSlug The slug of the film (e.g., "eyes-wide-shut").
+ * @returns {Promise<Object|null>} An object with film details, or null if not found/error.
  */
 async function getFilmDetails(filmSlug) {
     if (!filmSlug) {
-        throw new Error('Film slug é obrigatório.');
+        throw new Error('Film slug is required.'); // Translated
     }
 
     const url = `https://letterboxd.com/film/${filmSlug}/`;
@@ -27,71 +27,60 @@ async function getFilmDetails(filmSlug) {
 
         const $ = cheerio.load(response.data);
 
-        // --- Verificações de Erro na Página ---
+        // --- Page Error Checks ---
         const pageTitle = $('title').text();
         const mainContent = $('#content').text();
         if (pageTitle.includes('Page Not Found') || mainContent.includes('The page you were looking for doesn\'t exist')) {
-            throw new Error(`Filme '${filmSlug}' não encontrado.`);
+            throw new Error(`Film '${filmSlug}' not found.`); // Translated
         }
         if (response.status === 404) {
-             throw new Error(`A página do filme '${filmSlug}' retornou um erro 404 inesperado.`);
+             throw new Error(`The film page '${filmSlug}' returned an unexpected 404 error.`); // Translated
         }
-        // --- Fim das Verificações de Erro na Página ---
+        // --- End of Page Error Checks ---
 
 
-        // Extraindo Pôster de Alta Resolução - **NOVA ESTRATÉGIA!**
+        // Extracting High-Resolution Poster - **NEW STRATEGY!**
         let highResPosterUrl = null;
-        // 1. Tenta pegar a imagem com alta resolução diretamente da tag <img> dentro do modal (se for visível no HTML inicial)
         const modalImgSrc = $('#poster-modal .modal-body .poster img.image').attr('src');
         const modalImgSrcset = $('#poster-modal .modal-body .poster img.image').attr('srcset');
 
-        if (modalImgSrcset) { // Prioriza srcset se disponível
+        if (modalImgSrcset) { 
             const urls = modalImgSrcset.split(',').map(s => s.trim().split(' ')[0]);
-            if (urls.length > 0) highResPosterUrl = urls[urls.length - 1]; // Pega a maior resolução
+            if (urls.length > 0) highResPosterUrl = urls[urls.length - 1]; 
         }
-        if (!highResPosterUrl && modalImgSrc) { // Fallback para src
+        if (!highResPosterUrl && modalImgSrc) { 
             highResPosterUrl = modalImgSrc;
         }
 
-        // 2. Fallback para a URL do 'data-js-trigger="postermodal"' e tenta construir
+        // Fallback to URL from 'data-js-trigger="postermodal"' and try to construct
         if (!highResPosterUrl) {
             const posterModalLinkHref = $('a[data-js-trigger="postermodal"]').attr('href');
             if (posterModalLinkHref) {
-                // Remove o final /image-XXX/ e tenta pegar a URL base, ou uma de maior resolução
-                // Ex: /film/eyes-wide-shut/image-150/ -> https://letterboxd.com/film/eyes-wide-shut/
-                // E daí tentar construir uma imagem maior se o padrão for conhecido
                 highResPosterUrl = `https://letterboxd.com${posterModalLinkHref.replace(/\/image-\d+\/$/, '/')}`;
-                // Poderíamos tentar adicionar 'poster-1000.jpg' ou similar, mas é especulativo.
             }
         }
-        // console.log(`Debug Pôster: ${highResPosterUrl}`);
 
-
-        // Extraindo URL do Backdrop (Background)
+        // Extracting Backdrop (Background) URL
         let backdropUrl = null;
         const backdropDiv = $('#backdrop');
         if (backdropDiv.length) {
             backdropUrl = backdropDiv.attr('data-backdrop');
         }
-        // console.log(`Debug Backdrop: ${backdropUrl}`);
 
-
-        // Extraindo Número de Likes do Filme (Contagem Exata) - CORRIGIDO!
+        // Extracting Film Likes Count (Exact Count) - CORRECTED!
         let filmLikesCount = null;
-        const likesTooltipElement = $('.production-statistic.-likes a.tooltip'); // O <a> tem o data-original-title
+        const likesTooltipElement = $('.production-statistic.-likes a.tooltip'); 
         if (likesTooltipElement.length) {
             const originalTitle = likesTooltipElement.attr('data-original-title');
             if (originalTitle) {
                 const match = originalTitle.match(/Liked by ([\d,]+)/);
                 if (match && match[1]) {
-                    filmLikesCount = match[1].replace(/,/g, ''); // Remove vírgulas
+                    filmLikesCount = match[1].replace(/,/g, ''); 
                 }
             }
         }
-        // console.log(`Debug Likes: ${filmLikesCount}`);
 
-
-        // Extraindo Número de Watches (Assistidos) do Filme (Contagem Exata) - CORRIGIDO!
+        // Extracting Film Watches Count (Exact Count) - CORRECTED!
         let filmWatchesCount = null;
         const watchesTooltipElement = $('.production-statistic.-watches a.tooltip');
         if (watchesTooltipElement.length) {
@@ -99,23 +88,19 @@ async function getFilmDetails(filmSlug) {
             if (originalTitle) {
                 const match = originalTitle.match(/Watched by ([\d,]+)/);
                 if (match && match[1]) {
-                    filmWatchesCount = match[1].replace(/,/g, ''); // Remove vírgulas
+                    filmWatchesCount = match[1].replace(/,/g, ''); 
                 }
             }
         }
-        // console.log(`Debug Watches: ${filmWatchesCount}`);
 
-        
-        // Extraindo Diretor do filme
+        // Extracting Film Director
         let director = null;
         const directorElement = $('p.credits span.creatorlist a span.prettify');
         if (directorElement.length) {
             director = directorElement.text().trim();
         }
-        // console.log(`Debug Diretor: ${director}`);
 
-
-        // Extraindo Média de Rating e Contagem de Ratings - CORRIGIDO!
+        // Extracting Average Rating and Rating Count - CORRECTED!
         let averageRating = null;
         let ratingsCount = null;
         const averageRatingElement = $('span.average-rating a.display-rating');
@@ -129,8 +114,6 @@ async function getFilmDetails(filmSlug) {
                 }
             }
         }
-        // console.log(`Debug Rating: ${averageRating} (${ratingsCount})`);
-
 
         return {
             filmSlug: filmSlug,
@@ -145,13 +128,13 @@ async function getFilmDetails(filmSlug) {
 
     } catch (error) {
         if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'UND_ERR_SOCKET') {
-            throw new Error('Não foi possível conectar ao Letterboxd para buscar detalhes do filme. Verifique sua conexão com a internet.');
+            throw new Error('Could not connect to Letterboxd to fetch film details. Check your internet connection.'); // Translated
         }
-        if (error.message.includes('Filme') || error.message.includes('404')) {
+        if (error.message.includes('Film') || error.message.includes('404')) { // Translated
             throw error;
         }
-        console.error(`Erro inesperado ao raspar detalhes do filme '${filmSlug}':`, error.message);
-        throw new Error(`Ocorreu um erro inesperado ao buscar detalhes do filme '${filmSlug}'. Tente novamente mais tarde.`);
+        console.error(`Unexpected error scraping film details for '${filmSlug}':`, error.message); // Translated
+        throw new Error(`An unexpected error occurred while fetching details for film '${filmSlug}'. Please try again later.`); // Translated
     }
 }
 

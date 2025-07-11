@@ -1,11 +1,12 @@
 // scraper/getWatchlist.js
+
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 /**
- * Raspa a watchlist completa de um usuário do Letterboxd, navegando por todas as páginas.
- * @param {string} username O nome de usuário no Letterboxd.
- * @returns {Promise<Array<string>>} Um array com todos os slugs dos filmes da watchlist.
+ * Scrapes a user's complete Letterboxd watchlist, navigating through all pages.
+ * @param {string} username The Letterboxd username.
+ * @returns {Promise<Array<string>>} An array with all film slugs from the watchlist.
  */
 export async function getWatchlist(username) {
   let page = 1;
@@ -15,7 +16,7 @@ export async function getWatchlist(username) {
   };
 
   while (true) {
-    // A URL da watchlist é um pouco diferente da do diário
+    // The watchlist URL is slightly different from the diary URL
     const url = `https://letterboxd.com/${username}/watchlist/page/${page}/`;
     
     try {
@@ -24,9 +25,9 @@ export async function getWatchlist(username) {
 
       const posters = $('li.poster-container .film-poster');
 
-      // Se não houver mais pôsteres na página, chegamos ao fim.
+      // If there are no more posters on the page, we've reached the end.
       if (posters.length === 0) {
-        break; // Sai do loop while
+        break; // Exit the while loop
       }
 
       posters.each((i, element) => {
@@ -36,17 +37,17 @@ export async function getWatchlist(username) {
         }
       });
 
-      // Se encontramos filmes, vamos para a próxima página.
+      // If we found films, go to the next page.
       page++;
 
     } catch (error) {
-      // Um erro 404 significa que a página não existe, ou seja, fim da watchlist.
+      // A 404 error means the page does not exist, i.e., end of the watchlist.
       if (error.response && error.response.status === 404) {
-        break; // Sai do loop while
+        break; // Exit the while loop
       }
-      // Outros erros devem ser registrados, mas não quebram a função.
-      console.error(`Erro ao buscar a watchlist na página ${page} para ${username}:`, error.message);
-      break; // Em caso de outro erro, paramos para não entrar em loop infinito.
+      // Other errors should be logged, but not break the function.
+      console.error(`Error fetching watchlist on page ${page} for ${username}:`, error.message); // Translated
+      break; // In case of other error, we stop to avoid infinite loop.
     }
   }
   

@@ -16,7 +16,7 @@ export async function searchLetterboxd(query) {
       axios.get(`https://letterboxd.com/s/search/cast-crew/${formattedQuery}/`, { headers }).catch(() => null)
     ]);
 
-    // Processar resultados de FILMES
+    // Process FILM results
     if (filmResponse && filmResponse.status === 200) {
       const $ = cheerio.load(filmResponse.data);
       $('li.search-result.-production').each((i, element) => {
@@ -30,7 +30,7 @@ export async function searchLetterboxd(query) {
       });
     }
 
-    // Processar resultados de PESSOAS (Diretores)
+    // Process PERSON (Director) results
     if (personResponse && personResponse.status === 200) {
       const $ = cheerio.load(personResponse.data);
       $('li.search-result.-contributor').each((i, element) => {
@@ -52,40 +52,40 @@ export async function searchLetterboxd(query) {
     return results.slice(0, 25);
 
   } catch (error) {
-    console.error(`Erro fatal ao buscar por "${query}" no Letterboxd:`, error.message);
+    console.error(`Fatal error searching for "${query}" on Letterboxd:`, error.message); // Translated
     return [];
   }
 }
 
 /**
- * Raspa os filmes da página de um diretor usando o endpoint AJAX correto.
- * @param {string} directorPageUrl A URL relativa da página do diretor.
- * @returns {Promise<Array<Object>>} Uma lista de filmes do diretor.
+ * Scrapes films from a director's page using the correct AJAX endpoint.
+ * @param {string} directorPageUrl The relative URL of the director's page.
+ * @returns {Promise<Array<Object>>} A list of films by the director.
  */
 export async function getDirectorFilms(directorPageUrl) {
-    // O endpoint correto é a URL da página de filmes do diretor
+    // The correct endpoint is the URL of the director's films page
     const url = `https://letterboxd.com${directorPageUrl}films/`; 
     const films = [];
     const headers = {
-        'X-Requested-With': 'XMLHttpRequest', // O cabeçalho mágico é necessário aqui também
+        'X-Requested-With': 'XMLHttpRequest', // The magic header is also needed here
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     };
 
     try {
         const { data } = await axios.get(url, { headers });
-        // A resposta aqui também é o HTML direto da lista de filmes
+        // The response here is also the direct HTML of the film list
         const $ = cheerio.load(data);
         $('li.poster-container').each((i, element) => {
             const posterDiv = $(element).find('div.film-poster');
-            const title = posterDiv.find('img').attr('alt'); // Usar o 'alt' da imagem é mais confiável
+            const title = posterDiv.find('img').attr('alt'); // Using 'alt' attribute of the image is more reliable
             const slug = posterDiv.attr('data-film-slug');
             if(title && slug) { 
-                films.push({ title, slug: `/film/${slug}/` }); // Garantir que o slug tenha o formato de link
+                films.push({ title, slug: `/film/${slug}/` }); // Ensure slug has the link format
             }
         });
         return films;
     } catch (error) {
-        console.error(`Erro ao buscar filmes do diretor em ${url}:`, error.message);
+        console.error(`Error fetching director's films at ${url}:`, error.message); // Translated
         return [];
     }
 }

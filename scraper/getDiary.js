@@ -4,20 +4,20 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 /**
- * Scrapeia os filmes assistidos recentemente do diário de um usuário do Letterboxd.
- * Retorna uma lista de filmes encontrados na primeira página do diário.
+ * Scrapes recently watched films from a Letterboxd user's diary.
+ * Returns a list of films found on the first page of the diary.
  *
- * @param {string} username O nome de usuário do Letterboxd.
- * @returns {Promise<Array<Object>>} Uma array de objetos, cada um com os detalhes de um filme assistido.
- * Retorna uma array vazia se nenhum filme for encontrado ou em caso de erros específicos.
- * @throws {Error} Lança um erro se o usuário não for encontrado ou o perfil for privado.
+ * @param {string} username The Letterboxd username.
+ * @returns {Promise<Array<Object>>} An array of objects, each with details of a watched film.
+ * Returns an empty array if no films are found or in case of specific errors.
+ * @throws {Error} Throws an error if the user is not found or the profile is private.
  */
-async function getRecentDiaryEntries(username) { // Sem parâmetros de data aqui
+async function getRecentDiaryEntries(username) { 
     if (!username) {
-        throw new Error('Nome de usuário do Letterboxd é obrigatório.');
+        throw new Error('Letterboxd username is required.'); // Translated
     }
 
-    const url = `https://letterboxd.com/${username}/films/diary/`; // URL sempre da página principal
+    const url = `https://letterboxd.com/${username}/films/diary/`; // URL always of the main page
     const films = [];
     let currentMonth = '';
     let currentYear = '';
@@ -34,49 +34,42 @@ async function getRecentDiaryEntries(username) { // Sem parâmetros de data aqui
 
         const $ = cheerio.load(response.data);
 
-        // --- Verificações de Erro na Página ---
+        // --- Page Error Checks ---
         const pageTitle = $('title').text();
         const mainContent = $('#content').text(); 
 
         if (mainContent.includes('Sorry, we can’t find the page you’ve requested.')) { 
-            throw new Error('Usuário Letterboxd não encontrado.'); 
+            throw new Error('Letterboxd user not found.'); // Translated
         }
         
         if (pageTitle.includes('Profile is Private') || mainContent.includes('This profile is private')) {
-             throw new Error('Perfil Letterboxd é privado. Não é possível acessar o diário.');
+             throw new Error('Letterboxd profile is private. Cannot access diary.'); // Translated
         }
 
         if (response.status === 404) {
-             throw new Error('A página do Letterboxd retornou um erro 404 inesperado.');
+             throw new Error('The Letterboxd page returned an unexpected 404 error.'); // Translated
         }
-        // --- Fim das Verificações de Erro na Página ---
+        // --- End of Page Error Checks ---
 
         $('.diary-entry-row').each((i, element) => {
             const entry = $(element);
 
-            // A lógica de `currentMonth` e `currentYear` precisa ser robusta para logs agrupados
             const monthElementInFlag = entry.find('.td-calendar .date strong a');
             const yearElementInFlag = entry.find('.td-calendar .date small');
 
-            // Se há uma nova bandeira de mês/ano, atualiza
             if (monthElementInFlag.length && yearElementInFlag.length) {
                 currentMonth = monthElementInFlag.text().trim();
                 currentYear = yearElementInFlag.text().trim();
             } else if (monthElementInFlag.length && !yearElementInFlag.length) {
-                // Se só tem o mês, mas não o ano (ex: "Jul" sem "2025"), usa o ano atual ou o último 'currentYear'
                 currentMonth = monthElementInFlag.text().trim();
-                if (!currentYear) { // Se currentYear ainda não foi definido (primeira entrada)
-                    // Tenta inferir o ano da URL da bandeira, se necessário
+                if (!currentYear) { 
                     const urlPath = monthElementInFlag.attr('href');
                     const yearMatch = urlPath ? urlPath.match(/\/(\d{4})\/$/) : null;
                     if (yearMatch) currentYear = yearMatch[1];
-                    else currentYear = String(new Date().getFullYear()); // Fallback para ano atual
+                    else currentYear = String(new Date().getFullYear()); 
                 }
-            } else if (!currentMonth || !currentYear) { // Se não há bandeira e é a primeira entrada do scrape, tenta inferir
-                 // Isso é um caso limite se a primeira entrada da página não tem uma bandeira
-                 // Por padrão, se não pegou nada, use o mês/ano da data completa do item
-                 // Mas a lógica de `currentMonth` e `currentYear` deve garantir que eles tenham um valor após o primeiro item
-                 const fullDateAttr = entry.find('time.timestamp').attr('datetime'); // Ex: "2025-07-09T00:00:00.000Z"
+            } else if (!currentMonth || !currentYear) { 
+                 const fullDateAttr = entry.find('time.timestamp').attr('datetime'); 
                  if (fullDateAttr) {
                     const d = new Date(fullDateAttr);
                     currentYear = String(d.getFullYear());
@@ -131,7 +124,7 @@ async function getRecentDiaryEntries(username) { // Sem parâmetros de data aqui
                 year: filmYear,
                 url: filmUrl, 
                 watchedDate: watchedDateText,
-                watchedDateFull: watchedDateFull, // Esta é a chave para a filtragem!
+                watchedDateFull: watchedDateFull, 
                 loggedYear: loggedYear,
                 rating: rating,
                 filmSlug: filmSlug 
@@ -139,20 +132,20 @@ async function getRecentDiaryEntries(username) { // Sem parâmetros de data aqui
         });
 
         if (films.length === 0) {
-            console.log(`Debug: Nenhuma entrada de diário encontrada para "${username}".`);
+            console.log(`Debug: No diary entries found for "${username}".`); // Translated
         }
 
         return films;
 
     } catch (error) {
         if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'UND_ERR_SOCKET') {
-            throw new Error('Não foi possível conectar ao Letterboxd. Verifique sua conexão com a internet.');
+            throw new Error('Could not connect to Letterboxd. Check your internet connection.'); // Translated
         }
-        if (error.message.includes('Ocorreu um erro ao acessar o Letterboxd deste usuário.')) {
+        if (error.message.includes('Error accessing this user\'s Letterboxd.')) { // Translated
             throw error; 
         }
-        console.error(`Erro inesperado ao raspar diário do usuário ${username}:`, error.message);
-        throw new Error(`Ocorreu um erro inesperado ao buscar o diário de ${username}. Tente novamente mais tarde. Detalhes: ${error.message}`);
+        console.error(`Unexpected error scraping user diary for ${username}:`, error.message); // Translated
+        throw new Error(`An unexpected error occurred while fetching ${username}'s diary. Please try again later. Details: ${error.message}`); // Translated
     }
 }
 

@@ -1,4 +1,4 @@
-// scraper/getFullDiary.js (Com viewing_id)
+// scraper/getFullDiary.js (With viewing_id - Translated to English)
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
@@ -9,7 +9,7 @@ export async function getFullDiary(username) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     };
 
-    console.log(`[Scraper] Iniciando busca no diário completo de ${username}...`);
+    console.log(`[Scraper] Starting full diary fetch for ${username}...`); // Translated
 
     while (true) {
         const url = `https://letterboxd.com/${username}/films/diary/page/${page}/`;
@@ -20,8 +20,8 @@ export async function getFullDiary(username) {
             const diaryRows = $('tr.diary-entry-row');
 
             if (diaryRows.length === 0) {
-                console.log(`[Scraper] Finalizado. Encontradas ${allDiaryEntries.length} entradas em ${page - 1} páginas para ${username}.`);
-                break; // Não há mais entradas, para de buscar
+                console.log(`[Scraper] Finished. Found ${allDiaryEntries.length} entries on ${page - 1} pages for ${username}.`); // Translated
+                break; 
             }
 
             diaryRows.each((i, element) => {
@@ -40,9 +40,9 @@ export async function getFullDiary(username) {
                     }
                 }
 
-                // --- EXTRAÇÃO DE DATA E AGORA O VIEWING_ID ---
+                // --- DATE AND VIEWING_ID EXTRACTION ---
                 const dateLinkHref = row.find('td.td-day a').attr('href'); 
-                const viewingId = row.attr('data-viewing-id'); // <-- NOVO: Extrai o data-viewing-id
+                const viewingId = row.attr('data-viewing-id'); 
                 
                 let formattedDate = null;
 
@@ -51,24 +51,22 @@ export async function getFullDiary(username) {
                     if (dateParts && dateParts.length === 4) {
                         formattedDate = `${dateParts[1]}-${dateParts[2]}-${dateParts[3]}`;
                         try {
-                            // Apenas para validação, não comparação direta aqui
                             new Date(formattedDate); 
-                            console.log(`[Scraper Debug] Entrada ${i} - Título: ${title}, Viewing ID: '${viewingId}', Formatted Date: '${formattedDate}'`);
+                            console.log(`[Scraper Debug] Entry ${i} - Title: ${title}, Viewing ID: '${viewingId}', Formatted Date: '${formattedDate}'`); // Translated
                         } catch (e) {
-                            console.warn(`[Scraper] Erro ao criar objeto Date para '${formattedDate}' de '${title}': ${e.message}. Usando null.`);
+                            console.warn(`[Scraper] Error creating Date object for '${formattedDate}' of '${title}': ${e.message}. Using null.`); // Translated
                             formattedDate = null;
                         }
                     } else {
-                        console.warn(`[Scraper] Formato de data inesperado no href para '${title}': '${dateLinkHref}'. Usando null.`);
+                        console.warn(`[Scraper] Unexpected date format in href for '${title}': '${dateLinkHref}'. Using null.`); // Translated
                     }
                 } else {
-                    console.warn(`[Scraper] Link de data (td.td-day a) não encontrado para '${title}'.`);
+                    console.warn(`[Scraper] Day link (td.td-day a) not found for '${title}'.`); // Translated
                 }
 
-                // Se não há viewingId ou data, pulamos essa entrada
                 if (!viewingId || !formattedDate) { 
-                    console.warn(`[Scraper] Pulando entrada '${title}' devido a Viewing ID ou data inválida/ausente.`);
-                    return true; // Continua para a próxima entrada no loop .each
+                    console.warn(`[Scraper] Skipping entry '${title}' due to invalid/missing Viewing ID or date.`); // Translated
+                    return true; 
                 }
 
                 if (slug) {
@@ -79,10 +77,10 @@ export async function getFullDiary(username) {
             page++; 
         } catch (error) {
             if (error.response && error.response.status === 404) {
-                console.log(`[Scraper] Finalizado na página ${page}. Encontradas ${allDiaryEntries.length} entradas no total para ${username}.`);
+                console.log(`[Scraper] Finished on page ${page}. Found ${allDiaryEntries.length} entries in total for ${username}.`); // Translated
                 break;
             }
-            console.error(`[Scraper] Erro fatal durante a busca do diário na página ${page} para ${username}:`, error.message);
+            console.error(`[Scraper] Fatal error during diary fetch on page ${page} for ${username}:`, error.message); // Translated
             console.error(error); 
             break; 
         }

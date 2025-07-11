@@ -3,10 +3,10 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 /**
- * Busca as entradas do diário de um usuário do Letterboxd para um dia específico.
- * @param {string} username O nome de usuário do Letterboxd.
- * @param {Date} date O objeto Date para o dia a ser verificado.
- * @returns {Array<Object>} Um array de objetos de entrada do diário para o dia.
+ * Fetches diary entries for a specific day for a Letterboxd user.
+ * @param {string} username The Letterboxd username.
+ * @param {Date} date The Date object for the day to be checked.
+ * @returns {Array<Object>} An array of diary entry objects for the day.
  */
 export async function getDailyDiaryEntries(username, date) {
     const year = date.getFullYear();
@@ -20,7 +20,7 @@ export async function getDailyDiaryEntries(username, date) {
 
     const formattedDate = `${year}-${month}-${day}`; 
 
-    console.log(`[Scraper] Buscando diário para ${username} em ${formattedDate}...`);
+    console.log(`[Scraper] Fetching diary for ${username} on ${formattedDate}...`); // Translated
 
     try {
         const { data } = await axios.get(url, { headers });
@@ -56,10 +56,10 @@ export async function getDailyDiaryEntries(username, date) {
 
     } catch (error) {
         if (error.response && error.response.status === 404) {
-            console.log(`[Scraper] Nenhuma entrada encontrada para ${username} em ${formattedDate}.`);
+            console.log(`[Scraper] No entries found for ${username} on ${formattedDate}.`); // Translated
             return [];
         }
-        console.error(`[Scraper] Erro ao buscar diário para ${username} em ${formattedDate}:`, error.message);
+        console.error(`[Scraper] Error fetching diary for ${username} on ${formattedDate}:`, error.message); // Translated
         return [];
     }
 }

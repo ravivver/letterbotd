@@ -4,19 +4,19 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 /**
- * Raspa detalhes de um filme a partir de sua página no Letterboxd usando o slug.
- * @param {string} filmSlug O slug do filme (ex: "scarface-1983").
- * @returns {Promise<Object>} Objeto com title, year, posterUrlLetterboxd.
- * Retorna null se o filme não for encontrado ou se os dados essenciais não forem extraídos.
+ * Scrapes film details from its Letterboxd page using the slug.
+ * @param {string} filmSlug The film slug (e.g., "scarface-1983").
+ * @returns {Promise<Object>} Object with title, year, posterUrlLetterboxd.
+ * Returns null if the film is not found or if essential data cannot be extracted.
  */
 async function getFilmDetailsFromSlug(filmSlug) {
     if (!filmSlug) {
-        console.error("[Scraper - FilmDetails] Erro: Slug do filme é obrigatório.");
+        console.error("[Scraper - FilmDetails] Error: Film slug is required."); // Translated
         return null;
     }
 
     const url = `https://letterboxd.com/film/${filmSlug}/`;
-    console.log(`[Scraper - FilmDetails] Buscando detalhes para slug: ${filmSlug} na URL: ${url}`);
+    console.log(`[Scraper - FilmDetails] Fetching details for slug: ${filmSlug} at URL: ${url}`); // Translated
 
     try {
         const response = await axios.get(url, {
@@ -30,25 +30,23 @@ async function getFilmDetailsFromSlug(filmSlug) {
 
         const $ = cheerio.load(response.data);
 
-        // --- Verificações de Erro na Página do Filme ---
+        // --- Film Page Error Checks ---
         const pageTitleMeta = $('meta[property="og:title"]').attr('content');
         if (pageTitleMeta && (pageTitleMeta.includes('Page Not Found') || pageTitleMeta.includes('404'))) {
-            console.log(`[Scraper - FilmDetails] Filme com slug "${filmSlug}" não encontrado (via og:title ou 404).`);
+            console.log(`[Scraper - FilmDetails] Film with slug "${filmSlug}" not found (via og:title or 404).`); // Translated
             return null;
         }
         if (response.status === 404) {
-            console.log(`[Scraper - FilmDetails] Filme com slug "${filmSlug}" não encontrado (status 404).`);
+            console.log(`[Scraper - FilmDetails] Film with slug "${filmSlug}" not found (status 404).`); // Translated
             return null;
         }
-        // --- Fim das Verificações de Erro ---
+        // --- End of Error Checks ---
 
         let title = null;
         let year = null;
 
-        // --- TÍTULO: Usando o seletor fornecido ---
-        // Ele geralmente está dentro de um h1.
+        // --- TITLE: Using the provided selector ---
         title = $('h1 .name.prettify').text().trim();
-        // Fallback para meta tag se o seletor acima falhar, pois é um fallback seguro para o título geral.
         if (!title) {
             const ogTitle = $('meta[property="og:title"]').attr('content');
             if (ogTitle) {
@@ -61,7 +59,7 @@ async function getFilmDetailsFromSlug(filmSlug) {
             }
         }
         
-        // --- ANO: Usando o seletor fornecido ---
+        // --- YEAR: Using the provided selector ---
         const yearElement = $('span.releasedate a');
         if (yearElement.length) {
             const yearText = yearElement.text().trim();
@@ -69,33 +67,32 @@ async function getFilmDetailsFromSlug(filmSlug) {
             if (!isNaN(parsedYear)) {
                 year = parsedYear;
             } else {
-                console.log(`[Scraper - FilmDetails] Ano inválido encontrado para "${filmSlug}": ${yearText}`);
+                console.log(`[Scraper - FilmDetails] Invalid year found for "${filmSlug}": ${yearText}`); // Translated
             }
         } else {
-            console.log(`[Scraper - FilmDetails] Elemento de ano (span.releasedate a) NÃO encontrado para "${filmSlug}".`);
+            console.log(`[Scraper - FilmDetails] Year element (span.releasedate a) NOT found for "${filmSlug}".`); // Translated
         }
 
-        // Fallback para ano do og:title (se o og:title tinha o ano e não pegamos antes)
+        // Fallback for year from og:title (if og:title had the year and we didn't get it before)
         if (year === null) {
              const ogTitle = $('meta[property="og:title"]').attr('content');
             if (ogTitle) {
-                const match = ogTitle.match(/\((\d{4})\)$/); // Procura por (YYYY) no final
+                const match = ogTitle.match(/\((\d{4})\)$/); 
                 if (match) {
                     const parsedYear = parseInt(match[1]);
                     if (!isNaN(parsedYear)) {
                         year = parsedYear;
-                        console.log(`[Scraper - FilmDetails] Ano ${year} extraído do og:title (fallback).`);
+                        console.log(`[Scraper - FilmDetails] Year ${year} extracted from og:title (fallback).`); // Translated
                     }
                 }
             }
         }
 
-
-        // URL do Pôster (do background-image do div principal ou da tag img)
+        // Poster URL (from background-image of the main div or img tag)
         let posterUrlLetterboxd = null;
-        const posterDiv = $('.film-poster.poster'); // O container principal do pôster
+        const posterDiv = $('.film-poster.poster'); 
         if (posterDiv.length) {
-            const style = posterDiv.attr('style'); // ex: background-image: url("https://a.ltrbxd.com/resized/film-poster/...");
+            const style = posterDiv.attr('style'); 
             if (style && style.includes('background-image')) {
                 const urlMatch = style.match(/url\("(.+)"\)/);
                 if (urlMatch && urlMatch[1]) {
@@ -103,7 +100,7 @@ async function getFilmDetailsFromSlug(filmSlug) {
                 }
             }
         }
-        // Fallback: img tag dentro do film-poster (se não for background-image)
+        // Fallback: img tag inside film-poster (if not background-image)
         if (!posterUrlLetterboxd) {
             const imgElement = $('.film-poster img.image');
             if (imgElement.length) {
@@ -111,24 +108,23 @@ async function getFilmDetailsFromSlug(filmSlug) {
             }
         }
 
-        if (!title || year === null) { // Se não conseguiu pegar título ou ano, algo está errado
-             console.log(`[Scraper - FilmDetails] Falha ao extrair título ou ano essencial para "${filmSlug}". Título: "${title}", Ano: ${year}`);
+        if (!title || year === null) { 
+             console.log(`[Scraper - FilmDetails] Failed to extract essential title or year for "${filmSlug}". Title: "${title}", Year: ${year}`); // Translated
              return null;
         }
 
-
-        console.log(`[Scraper - FilmDetails] Detalhes para "${filmSlug}": Título: "${title}", Ano: ${year}, Pôster LB: ${posterUrlLetterboxd ? 'Encontrado' : 'Não encontrado'}`);
+        console.log(`[Scraper - FilmDetails] Details for "${filmSlug}": Title: "${title}", Year: ${year}, LB Poster: ${posterUrlLetterboxd ? 'Found' : 'Not found'}`); // Translated
 
         return {
             title,
             year,
-            posterUrlLetterboxd, // Esta URL é do Letterboxd, para uso interno se necessário
-            slug: filmSlug // Manter o slug
+            posterUrlLetterboxd, 
+            slug: filmSlug 
         };
 
     } catch (error) {
-        console.error(`Erro inesperado ao buscar detalhes do filme "${filmSlug}":`, error.message);
-        return null; // Retorna null em caso de erro para não quebrar o processo principal
+        console.error(`Unexpected error fetching film details for "${filmSlug}":`, error.message); // Translated
+        return null; 
     }
 }
 
