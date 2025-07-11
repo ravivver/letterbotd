@@ -41,7 +41,7 @@ Aqui está a lista completa de comandos:
 * **`/diary [user] [dia] [mes] [ano]`**: Mostra os filmes assistidos em uma data específica.
 * **`/review [user] [film]`**: Exibe a última review ou busca uma review específica.
 * **`/grid [user]`**: Gera uma grade de pôsteres de filmes (curtidos ou assistidos).
-* **`/compare user1: [@usuario] [user2: @usuario]`**: Compara e lista os filmes em comum entre dois usuários, com paginação.
+* **`/compare user1: [@user] [user2: @user]`**: Compara e lista os filmes em comum entre dois usuários, com paginação.
 * **`/hint [user]`**: Sugere um filme aleatório da watchlist de um usuário.
 * **`/top`**: Exibe o top 5 filmes mais assistidos pelos membros do servidor que usaram `/sync`.
 * **`/sync`**: Sincroniza seu diário do Letterboxd para alimentar o ranking do servidor.
