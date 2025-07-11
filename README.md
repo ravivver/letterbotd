@@ -35,16 +35,17 @@ Aqui está a lista completa de comandos:
 * **`/link [username]`**: Vincula sua conta Discord a um perfil Letterboxd.
 * **`/unlink`**: Desvincula sua conta.
 * **`/search film: [termo]`**: Busca por um filme ou diretor.
-* **`/checkfilm user: [@usuario] film: [filme]`**: Verifica se um usuário já assistiu a um filme.
+* **`/check user: [user] film: [filme]`**: Verifica se um usuário já assistiu a um filme.
 * **`/profile [user]`**: Exibe as estatísticas gerais de um perfil Letterboxd.
 * **`/favorites [user]`**: Mostra os 4 filmes favoritos de um usuário em uma lista e grade.
 * **`/diary [user] [dia] [mes] [ano]`**: Mostra os filmes assistidos em uma data específica.
 * **`/review [user] [film]`**: Exibe a última review ou busca uma review específica.
-* **`/likesgrid [user]`**: Gera uma grade personalizada com pôsteres dos filmes curtidos.
-* **`/compare user1: [@usuario] [user2: @usuario]`**: Compara e lista os filmes em comum entre dois usuários, com paginação.
+* **`/grid [user]`**: Gera uma grade de pôsteres de filmes (curtidos ou assistidos).
+* **`/compare user1: [@user] [user2: @user]`**: Compara e lista os filmes em comum entre dois usuários, com paginação.
 * **`/hint [user]`**: Sugere um filme aleatório da watchlist de um usuário.
 * **`/top`**: Exibe o top 5 filmes mais assistidos pelos membros do servidor que usaram `/sync`.
 * **`/sync`**: Sincroniza seu diário do Letterboxd para alimentar o ranking do servidor.
+* **`/last`**: Mostra o último filme assistido no Letterboxd de um usuário.
 * **`/help`**: Mostra esta lista de comandos.
 
 ## 🔧 Configuração e Instalação
