@@ -1,163 +1,129 @@
-import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType } from 'discord.js';
-import { searchLetterboxd, getDirectorFilms } from '../scraper/searchLetterboxd.js';
+// commands/search.js (Single command with mutually exclusive optional fields)
+
+import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { searchMovieTMDB, getTmdbPosterUrl, searchPersonTMDB, getPersonDetailsTMDB } from '../api/tmdb.js';
+// Reintroduzindo os scrapers para obter os slugs/URLs do Letterboxd
+import { searchLetterboxd } from '../scraper/searchLetterboxd.js';
 import getFilmDetailsFromSlug from '../scraper/getFilmDetailsFromSlug.js';
 
 export const data = new SlashCommandBuilder()
     .setName('search')
-    .setDescription('Searches for a movie or director on Letterboxd.') // Translated
-    .addStringOption(option =>
-        option.setName('term') // Changed 'termo' to 'term'
-            .setDescription('The name of the movie or director you want to search for.') // Translated
-            .setRequired(true));
+    .setDescription('Searches for films or directors using TMDB.')
+    .addStringOption(option => 
+        option.setName('film')
+            .setDescription('The title of the film to search for.')
+            .setRequired(false))
+    .addStringOption(option => 
+        option.setName('director')
+            .setDescription('The name of the director to search for.')
+            .setRequired(false));
 
 export async function execute(interaction) {
-    const term = interaction.options.getString('term'); // Changed 'termo' to 'term'
-    const searchResults = await searchLetterboxd(term);
+    const filmQuery = interaction.options.getString('film');
+    const directorQuery = interaction.options.getString('director');
 
-    if (searchResults.length === 0) {
+    if (filmQuery && directorQuery) {
         return interaction.reply({ 
-            content: `No results found for the search "${term}".`, // Translated
+            content: 'Please search for either a film OR a director, not both at the same time.',
             ephemeral: true 
         });
     }
 
-    await interaction.deferReply(); 
-    
-    const options = searchResults.map(result => {
-        if (result.type === 'film') {
-            return {
-                label: `[Movie] ${result.title}`.substring(0, 100), // Translated
-                description: result.year ? `Year: ${result.year}` : 'Movie', // Translated
-                value: `film_${result.slug}`
-            };
-        } else if (result.type === 'director') {
-            return {
-                label: `[Director] ${result.name}`.substring(0, 100), // Translated
-                description: 'Person', // Translated
-                value: `director_${result.name}|${result.pageUrl}`
-            };
-        }
-    }).filter(Boolean);
-
-    const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId('search_result_select')
-        .setPlaceholder('Multiple results found. Select one.') // Translated
-        .addOptions(options);
-
-    const row = new ActionRowBuilder().addComponents(selectMenu);
-
-    const selectMessage = await interaction.editReply({
-        content: `Found ${searchResults.length} result(s) for "${term}". Please choose one:`, // Translated
-        components: [row]
-    });
-
-    const collector = selectMessage.createMessageComponentCollector({
-        componentType: ComponentType.StringSelect,
-        filter: i => i.user.id === interaction.user.id && i.customId === 'search_result_select',
-        time: 60_000
-    });
-
-    collector.on('collect', async i => {
-        await i.update({ content: 'Here it is!', components: [] }); // Translated
-
-        const selectedValue = i.values[0];
-        const [type, ...rest] = selectedValue.split(/_(.*)/s);
-        const identifier = rest[0];
-
-        if (type === 'film') {
-            await processFilmSelection(interaction, identifier);
-        } else if (type === 'director') {
-            const [name, pageUrl] = identifier.split('|');
-            await processDirectorSelection(interaction, name, pageUrl);
-        }
-    });
-
-    collector.on('end', collected => {
-        if (collected.size === 0) {
-            interaction.editReply({ content: 'Selection time has expired.', components: [] }); // Translated
-        }
-    });
-}
-
-async function processFilmSelection(interaction, slug) {
-    try {
-        const letterboxdDetails = await getFilmDetailsFromSlug(slug);
-        if (!letterboxdDetails) throw new Error('Could not retrieve Letterboxd details.'); // Translated
-
-        const movieData = await searchMovieTMDB(letterboxdDetails.title, letterboxdDetails.year);
-        if (!movieData) throw new Error('Movie not found in TMDB database.'); // Translated
-
-        const filmEmbed = new EmbedBuilder()
-            .setColor(0x00E054)
-            .setTitle(`${movieData.title} (${letterboxdDetails.year})`)
-            .setURL(`https://letterboxd.com/film/${slug}`)
-            .setDescription(movieData.overview || 'Synopsis not available.') // Translated
-            .addFields(
-                { name: 'Genres', value: movieData.genres.join(', ') || 'N/A', inline: true }, // Translated
-                { name: 'TMDB Rating', value: movieData.vote_average ? `⭐ ${movieData.vote_average.toFixed(1)}/10` : 'N/A', inline: true } // Translated
-            )
-            .setImage(getTmdbPosterUrl(movieData.poster_path, 'w500'));
-
-        await interaction.editReply({ embeds: [filmEmbed] });
-    } catch (error) {
-        console.error('Error processing film selection:', error); // Translated
-        await interaction.editReply({ content: `An error occurred while fetching movie details: ${error.message}` }); // Translated
+    if (!filmQuery && !directorQuery) {
+        return interaction.reply({ 
+            content: 'Please provide a film title or a director name to search for.',
+            ephemeral: true 
+        });
     }
-}
 
+    await interaction.deferReply();
 
-async function processDirectorSelection(interaction, directorName, letterboxdUrl) {
     try {
-        const [personResult, films] = await Promise.all([
-            searchPersonTMDB(directorName),
-            getDirectorFilms(letterboxdUrl)
-        ]);
+        if (filmQuery) {
+            // --- Search for Film ---
+            const movieData = await searchMovieTMDB(filmQuery); // Busca dados no TMDB
+            
+            if (!movieData) {
+                return interaction.editReply({ content: `No movie found for "${filmQuery}" on TMDB.`, ephemeral: true });
+            }
 
-        if (!personResult) throw new Error('Director not found on TMDB.'); // Translated
+            // Busca o slug do Letterboxd usando o nome do filme para gerar o link correto
+            const letterboxdSearch = await searchLetterboxd(movieData.title);
+            const filmResult = letterboxdSearch.find(r => r.type === 'film' && r.slug);
+            
+            let filmUrlLetterboxd = `https://www.themoviedb.org/movie/${movieData.id}`; // Fallback TMDB URL
+            if (filmResult) {
+                filmUrlLetterboxd = `https://letterboxd.com/film/${filmResult.slug}`;
+            }
 
-        const personDetails = await getPersonDetailsTMDB(personResult.id);
-        if (!personDetails) throw new Error('Could not retrieve director details from TMDB.'); // Translated
+            const filmEmbed = new EmbedBuilder()
+                .setColor(0x00E054)
+                .setTitle(`${movieData.title}`)
+                .setURL(filmUrlLetterboxd) // Define a URL do Letterboxd (ou TMDB se não encontrar)
+                .setDescription(movieData.overview || 'Synopsis not available.')
+                .addFields(
+                    { name: 'Genres', value: movieData.genres.join(', ') || 'N/A', inline: true },
+                    { name: 'Director(s)', value: movieData.directors.join(', ') || 'N/A', inline: true }, 
+                    { name: 'TMDB Rating', value: movieData.vote_average ? `⭐ ${movieData.vote_average.toFixed(1)}/10` : 'N/A', inline: true }
+                )
+                .setImage(getTmdbPosterUrl(movieData.poster_path, 'w500'));
 
-        let biography = personDetails.biography || 'Biography not available.'; // Translated
-        if (biography.length > 800) {
-            biography = biography.substring(0, 800) + '...';
+            await interaction.editReply({ embeds: [filmEmbed] });
+
+        } else if (directorQuery) {
+            // --- Search for Director ---
+            const personData = await searchPersonTMDB(directorQuery); // Busca a pessoa na TMDB
+
+            if (!personData) {
+                return interaction.editReply({ content: `No director found for "${directorQuery}" on TMDB.`, ephemeral: true });
+            }
+
+            // Busca a URL do Letterboxd para o diretor usando o scraper
+            const letterboxdSearch = await searchLetterboxd(personData.name);
+            const directorResult = letterboxdSearch.find(r => r.type === 'director' && r.pageUrl);
+            
+            let directorUrlLetterboxd = `https://www.themoviedb.org/person/${personData.id}`; // Fallback TMDB URL
+            if (directorResult) {
+                directorUrlLetterboxd = `https://letterboxd.com${directorResult.pageUrl}`;
+            }
+
+            const directorDetails = await getPersonDetailsTMDB(personData.id);
+
+            let biography = directorDetails.biography || 'Biography not available.';
+            if (biography.length > 800) {
+                biography = biography.substring(0, 800) + '...';
+            }
+
+            const directorEmbed = new EmbedBuilder()
+                .setColor(0x445566)
+                .setTitle(directorDetails.name)
+                .setURL(directorUrlLetterboxd) // Define a URL do Letterboxd (ou TMDB se não encontrar)
+                .setDescription(biography)
+                .setThumbnail(getTmdbPosterUrl(personData.profile_path, 'w500'));
+
+            if (directorDetails.birthday) {
+                directorEmbed.addFields({ 
+                    name: 'Born', 
+                    value: directorDetails.birthday.split('-').reverse().join('/'), 
+                    inline: true 
+                });
+            }
+            if (directorDetails.place_of_birth) {
+                directorEmbed.addFields({ 
+                    name: 'From', 
+                    value: directorDetails.place_of_birth, 
+                    inline: true 
+                });
+            }
+            
+            directorEmbed.addFields(
+                { name: 'Known For', value: personData.known_for_department || 'N/A', inline: true }
+            );
+            
+            await interaction.editReply({ embeds: [directorEmbed] });
         }
-
-        const filmList = films.length > 0
-            ? films.slice(0, 15).map(film => `• [${film.title}](https://letterboxd.com${film.slug})`).join('\n')
-            : 'No movies found.'; // Translated
-        
-        const directorEmbed = new EmbedBuilder()
-            .setColor(0x445566)
-            .setTitle(personDetails.name)
-            .setURL(`https://letterboxd.com${letterboxdUrl}`)
-            .setDescription(biography)
-            .setThumbnail(getTmdbPosterUrl(personDetails.profile_path, 'w500'));
-
-        if (personDetails.birthday) {
-            directorEmbed.addFields({ 
-                name: 'Born', // Translated
-                value: personDetails.birthday.split('-').reverse().join('/'), 
-                inline: true 
-            });
-        }
-        if (personDetails.place_of_birth) {
-            directorEmbed.addFields({ 
-                name: 'From', // Translated
-                value: personDetails.place_of_birth, 
-                inline: true 
-            });
-        }
-        
-        directorEmbed.addFields(
-            { name: `Filmography (${films.length} films)`, value: filmList } // Translated
-        );
-        
-        await interaction.editReply({ embeds: [directorEmbed] });
-
     } catch (error) {
-        console.error('Error processing director selection:', error); // Translated
-        await interaction.editReply({ content: `An error occurred while fetching director details: ${error.message}` }); // Translated
+        console.error('Error in /search command:', error);
+        await interaction.editReply({ content: `An error occurred during the search: ${error.message}` });
     }
 }
