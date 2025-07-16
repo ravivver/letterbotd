@@ -683,6 +683,157 @@ async function createLetterIDEmbed(cardData) {
     }
 }
 
+/**
+ * Creates an embed for the movie guessing quiz.
+ * @param {Object} movie TMDB movie object.
+ * @param {'synopsis'|'poster'|'both'} contentType How to present the quiz (synopsis, poster, or both).
+ * @param {Function} getTmdbPosterUrlFn The function to get TMDB poster URL.
+ * @returns {Promise<EmbedBuilder>} The configured EmbedBuilder.
+ */
+async function createQuizEmbed(movie, contentType, getTmdbPosterUrlFn) {
+    const embed = new EmbedBuilder()
+        .setColor(0x7289DA) // Discord's blurple color
+        .setTitle('🎬 Guess the Movie! 🍿');
+
+    let descriptionContent = ''; // Usar uma nova variável para o conteúdo da descrição
+    let hasImage = false; // Flag para verificar se há imagem
+
+    if (contentType === 'synopsis' || contentType === 'both') {
+        descriptionContent = movie.overview ? movie.overview.substring(0, 1000) + (movie.overview.length > 1000 ? '...' : '') : ''; // Não preenche com "No synopsis available." aqui ainda
+    }
+
+    if (contentType === 'poster' || contentType === 'both') {
+        if (movie.poster_path) {
+            const posterUrl = getTmdbPosterUrlFn(movie.poster_path, 'w500');
+            embed.setImage(posterUrl);
+            hasImage = true;
+        }
+    }
+
+    // Lógica para garantir que a descrição nunca seja vazia e inclua a dica do tempo
+    let finalDescription = '';
+    if (descriptionContent.trim().length > 0) {
+        finalDescription = descriptionContent;
+    } else if (contentType === 'synopsis' || contentType === 'both') {
+        finalDescription = 'No synopsis available for this movie.';
+    } else if (contentType === 'poster' && !hasImage) {
+        finalDescription = 'No poster available for this movie.';
+    } else { // Caso fallback para qualquer cenário que ainda esteja vazio
+        finalDescription = 'No clues available for this movie.';
+    }
+
+    finalDescription += '\n\nYou have 30 seconds! Type your guess in the chat.';
+    
+    embed.setDescription(finalDescription);
+    embed.setFooter(null); // Garante que o footer não seja duplicado, pois a dica está na descrição
+
+    return embed;
+}
+
+/**
+ * Creates an embed to reveal the quiz answer and announce the winner.
+ * @param {Object} movie The correct TMDB movie object.
+ * @param {Object|null} correctGuesser Discord User object of the winner, or null if no one guessed.
+ * @param {string} finalFilmUrl The Letterboxd or TMDB URL for the film.
+ * @param {Function} getTmdbPosterUrlFn The function to get TMDB poster URL.
+ * @returns {Promise<EmbedBuilder>} The configured EmbedBuilder.
+ */
+async function revealQuizAnswer(movie, correctGuesser, finalFilmUrl, getTmdbPosterUrlFn) {
+    const embed = new EmbedBuilder()
+        .setColor(correctGuesser ? 0x00FF00 : 0xFF0000) // Green for win, Red for no win
+        .setTitle(`The movie was: ${movie.title} (${new Date(movie.release_date).getFullYear()}) 🎉`)
+        .setURL(finalFilmUrl);
+
+    if (movie.poster_path) {
+        embed.setThumbnail(getTmdbPosterUrlFn(movie.poster_path, 'w92')); // Smaller thumbnail
+    }
+
+    let description = `**Synopsis:** ${movie.overview ? movie.overview.substring(0, 700) + (movie.overview.length > 700 ? '...' : '') : 'N/A'}\n\n`;
+    description += `[View on Letterboxd/TMDB](${finalFilmUrl})\n\n`;
+
+    if (correctGuesser) {
+        description += `**Congratulations, ${correctGuesser.displayName || correctGuesser.username}! You guessed it!** 🏆`;
+    } else {
+        description += '**Time\'s up! Nobody guessed correctly this time.** 😔';
+    }
+
+    // A descrição de revelação também deve garantir não ser vazia
+    embed.setDescription(description.length > 0 ? description : ' ');
+
+    return embed;
+}
+
+/**
+ * Creates an embed to display film taste compatibility between two users.
+ * @param {string} user1DisplayName Discord display name of user 1.
+ * @param {string} user2DisplayName Discord display name of user 2.
+ * @param {string} lbUsername1 Letterboxd username of user 1.
+ * @param {string} lbUsername2 Letterboxd username of user 2.
+ * @param {number} compatibilityPercentage The calculated compatibility percentage.
+ * @param {number} commonFilmsCount Number of films watched by both users.
+ * @param {Array<Object>} mostAgreedFilms List of 3 films where tastes most agreed.
+ * @param {Array<Object>} mostDisagreedFilms List of 3 films where tastes most disagreed.
+ * @returns {EmbedBuilder} The configured EmbedBuilder.
+ */
+function createTasteEmbed(
+    user1DisplayName,
+    user2DisplayName,
+    lbUsername1,
+    lbUsername2,
+    compatibilityPercentage,
+    commonFilmsCount,
+    mostAgreedFilms,
+    mostDisagreedFilms
+) {
+    const embed = new EmbedBuilder()
+        .setColor(0xFFA500) // Orange color for compatibility
+        .setTitle(`Taste Compatibility: ${user1DisplayName} vs. ${user2DisplayName} 🔗`);
+
+    let description = `Comparing **[${lbUsername1}](https://letterboxd.com/${lbUsername1}/)** and **[${lbUsername2}](https://letterboxd.com/${lbUsername2}/)**:\n`; 
+    
+    // Lógica para adicionar emoji baseado na porcentagem
+    let compatibilityEmoji = '';
+    if (compatibilityPercentage > 90) {
+        compatibilityEmoji = '❤️';
+    } else if (compatibilityPercentage >= 70) { // Entre 70 e 90%
+        compatibilityEmoji = '✌️';
+    } else if (compatibilityPercentage >= 50) { // Entre 50 e 70%
+        compatibilityEmoji = '💀';
+    } else { // Menos de 50%
+        compatibilityEmoji = '💩';
+    }
+
+    // A linha da porcentagem agora inclui o emoji
+    description += `## **${compatibilityPercentage}% Compatibility ${compatibilityEmoji}**\n`;
+    description += `Based on **${commonFilmsCount}** films watched by both users.\n\n`;
+
+    if (commonFilmsCount > 0) {
+        if (mostAgreedFilms.length > 0) {
+            description += '**Most Agreed Films (Lowest Rating Difference):**\n';
+            mostAgreedFilms.forEach(film => {
+                const filmUrl = `https://letterboxd.com/film/${film.slug}/`;
+                description += `• [${film.title} (${film.year || 'N/A'})](${filmUrl}) - ${convertRatingToStars(film.rating1)} vs ${convertRatingToStars(film.rating2)}\n`;
+            });
+            description += '\n';
+        }
+
+        if (mostDisagreedFilms.length > 0) {
+            description += '**Most Disagreed Films (Highest Rating Difference):**\n';
+            mostDisagreedFilms.forEach(film => {
+                const filmUrl = `https://letterboxd.com/film/${film.slug}/`;
+                description += `• [${film.title} (${film.year || 'N/A'})](${filmUrl}) - ${convertRatingToStars(film.rating1)} vs ${convertRatingToStars(film.rating2)}\n`;
+            });
+            description += '\n';
+        }
+    } else {
+        description += 'No common films found in their diaries to compare taste.';
+    }
+
+    embed.setDescription(description.substring(0, 4096));
+
+    return embed;
+}
+
 // --- FINAL EXPORT BLOCK OF ALL FUNCTIONS ---
 // Export all functions for use in other modules
 export {
@@ -695,5 +846,8 @@ export {
     formatDateEn,
     convertRatingToStars,
     createMovieEmbed,
-    createLetterIDEmbed
+    createQuizEmbed,
+    revealQuizAnswer,
+    createLetterIDEmbed,
+    createTasteEmbed
 };
