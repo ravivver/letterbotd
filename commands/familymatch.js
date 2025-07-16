@@ -303,7 +303,7 @@ async function findAndRecommendMovie(interaction, participants, queueMessage) {
         // We can use createMovieEmbed to display the movie
         const embed = createMovieEmbed(recommendedMovie, posterUrl, genreNames, `https://www.themoviedb.org/movie/${recommendedMovie.id}`); 
         
-        embed.setTitle(`🎥 Family Match: Your Ideal Movie! 🍿`);
+        embed.setTitle(`🎬 Family Match: Your Ideal Movie! 🍿`);
         embed.setDescription(`Here's a movie recommendation for the group:\n\n${embed.data.description}`);
         embed.addFields(
             { name: 'Participants', value: participantsUsernames.join(', '), inline: false },

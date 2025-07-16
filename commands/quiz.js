@@ -72,7 +72,7 @@ export default {
             // Shuffle array using Fisher-Yates (Knuth) shuffle algorithm
             for (let i = allQuizOptions.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
-                [allQuizOptions[i], allQuizOptions[j]] = [allQuizOptions[j], allQuizOptions[i]];
+                [allQuizOptions[i], allQuizOptions[j]] = [allQuizOptions[j], allQuizOptions[j]];
             }
 
             // 3. Determine quiz content type (synopsis, poster, or both)

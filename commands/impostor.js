@@ -4,48 +4,48 @@ import { SlashCommandBuilder, ActionRowBuilder, StringSelectMenuBuilder, EmbedBu
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url'; 
-import { getFullDiary } from '../scraper/getFullDiary.js'; // getFullDiary.js é o que busca todas as páginas
+import { getFullDiary } from '../scraper/getFullDiary.js'; // getFullDiary.js is what fetches all pages
 import { searchMovieTMDB, getTmdbPosterUrl } from '../api/tmdb.js'; //
-import { revealImpostorAnswer, createGridImage } from '../utils/formatEmbed.js'; // Importa a nova função de revelação e createGridImage
-import { searchLetterboxd } from '../scraper/searchLetterboxd.js'; // Importa para buscar links Letterboxd
+import { revealImpostorAnswer, createGridImage } from '../utils/formatEmbed.js'; // Imports the new reveal function and createGridImage
+import { searchLetterboxd } from '../scraper/searchLetterboxd.js'; // Imports to search Letterboxd links
 
-// Resolve __filename e __dirname para ES Modules
+// Resolve __filename and __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const usersFilePath = path.join(__dirname, '..', 'storage', 'users.json'); //
 
-// Mapa para gerenciar sessões ativas de Impostor por canal
+// Map to manage active Impostor games per channel
 const activeImpostorGames = new Map(); // channelId -> { targetUserId, correctImpostorMovieId, timeoutId, guessedUsers: Set<userId> }
 
-// Tempo limite para o quiz do Impostor (30 segundos)
+// Timeout for the Impostor quiz (30 seconds)
 const IMPOSTOR_TIMEOUT_MS = 30000;
-const NUMBER_OF_OPTIONS = 10; // Total de filmes a serem exibidos (1 impostor + 9 amados)
+const NUMBER_OF_OPTIONS = 10; // Total films to display (1 impostor + 9 loved)
 
 /**
- * Função auxiliar para normalizar strings para comparação (útil para títulos de filmes).
- * Remove caracteres não alfanuméricos (exceto espaços), reduz múltiplos espaços para um único, e remove espaços no início/fim.
- * @param {string} str A string a ser normalizada.
- * @returns {string} A string normalizada.
+ * Helper function to normalize strings for comparison (useful for movie titles).
+ * Removes non-alphanumeric characters (except spaces), reduces multiple spaces to a single one, and trims leading/trailing spaces.
+ * @param {string} str The string to normalize.
+ * @returns {string} The normalized string.
  */
 function normalizeString(str) {
     if (!str) return '';
     return str.toLowerCase()
-              .replace(/[^a-z0-9 ]/g, '') // Mantém letras, números E espaços
-              .replace(/\s+/g, ' ') // Substitui múltiplos espaços por um único espaço
-              .trim(); // Remove espaços no início/fim
+              .replace(/[^a-z0-9 ]/g, '') // Keeps letters, numbers AND spaces
+              .replace(/\s+/g, ' ') // Replaces multiple spaces with a single space
+              .trim(); // Removes leading/trailing spaces
 }
 
 /**
- * Função auxiliar para obter o ano de forma segura a partir da data de lançamento do TMDB.
- * Retorna 'N/A' se a data for inválida ou não existir.
- * @param {string|null|undefined} releaseDate A string da data de lançamento do TMDB.
- * @returns {string} O ano como string ou 'N/A'.
+ * Helper function to safely get the year from TMDB release date.
+ * Returns 'N/A' if the date is invalid or non-existent.
+ * @param {string|null|undefined} releaseDate The TMDB release date string.
+ * @returns {string} The year as a string or 'N/A'.
  */
 function getYearFromReleaseDate(releaseDate) {
     if (!releaseDate) return 'N/A';
     try {
         const date = new Date(releaseDate);
-        if (isNaN(date.getTime())) { // Verifica se a data é "Invalid Date"
+        if (isNaN(date.getTime())) { // Checks if the date is "Invalid Date"
             return 'N/A';
         }
         return date.getFullYear().toString();
@@ -69,9 +69,9 @@ export default {
         const channelId = interaction.channel.id;
         const targetDiscordUser = interaction.options.getUser('target_user');
 
-        // Verificar se já existe um jogo ativo no canal
+        // Check if there's already an active game in the channel
         if (activeImpostorGames.has(channelId)) {
-            await interaction.editReply({ content: 'Já existe um jogo do Impostor ativo neste neste canal. Por favor, espere-o terminar.', ephemeral: true });
+            await interaction.editReply({ content: 'There is already an active Impostor game in this channel. Please wait for it to finish.', ephemeral: true });
             return;
         }
 
@@ -80,11 +80,11 @@ export default {
             usersData = JSON.parse(await fs.readFile(usersFilePath, 'utf8')); //
         } catch (e) {
             console.error("Error reading users.json:", e);
-            await interaction.editReply({ content: 'Ocorreu um erro ao carregar dados de usuário. Tente novamente mais tarde.', ephemeral: true });
+            await interaction.editReply({ content: 'An error occurred while loading user data. Please try again later.', ephemeral: true });
             return;
         }
 
-        // Função auxiliar para obter o username Letterboxd
+        // Helper function to get the Letterboxd username
         const getLetterboxdUsername = (discordId) => {
             const userEntry = usersData[discordId]; //
             if (typeof userEntry === 'string') {
@@ -98,35 +98,35 @@ export default {
         const targetLetterboxdUsername = getLetterboxdUsername(targetDiscordUser.id);
 
         if (!targetLetterboxdUsername) {
-            await interaction.editReply({ content: `O usuário **${targetDiscordUser.displayName || targetDiscordUser.username}** não tem uma conta Letterboxd vinculada.`, ephemeral: true });
+            await interaction.editReply({ content: `User **${targetDiscordUser.displayName || targetDiscordUser.username}** has not linked a Letterboxd account.`, ephemeral: true });
             return;
         }
 
         try {
-            // Guarda a referência da primeira mensagem para edições posteriores (principalmente em caso de erro)
-            const initialInteractionReply = await interaction.editReply(`Coletando dados do diário de **${targetLetterboxdUsername}**...`); 
+            // Store the reference of the first message for later edits (especially in case of error)
+            const initialInteractionReply = await interaction.editReply(`Collecting diary data for **${targetLetterboxdUsername}**...`); 
 
             const diary = await getFullDiary(targetLetterboxdUsername); //
 
             if (!diary || diary.length === 0) {
-                await initialInteractionReply.edit({ content: `Não foi possível recuperar o diário de **${targetLetterboxdUsername}** ou ele está vazio.`, ephemeral: true });
+                await initialInteractionReply.edit({ content: `Could not retrieve diary for **${targetLetterboxdUsername}** or it is empty.`, ephemeral: true });
                 return;
             }
 
-            // Filtrar filmes amados (rating >= 4.0) e odiados (rating <= 1.0)
+            // Filter for loved films (rating >= 4.0) and hated films (rating <= 1.0)
             const lovedFilms = diary.filter(entry => entry.rating >= 4.0); //
             const hatedFilms = diary.filter(entry => entry.rating <= 1.0); //
 
-            // Precisamos de pelo menos 1 filme odiado e (NUMBER_OF_OPTIONS - 1) filmes amados
+            // We need at least 1 hated film and (NUMBER_OF_OPTIONS - 1) loved films
             if (hatedFilms.length < 1 || lovedFilms.length < (NUMBER_OF_OPTIONS - 1)) {
-                await initialInteractionReply.edit({ content: `O diário de **${targetLetterboxdUsername}** não contém filmes suficientes (pelo menos 1 odiado e ${NUMBER_OF_OPTIONS - 1} amados) para iniciar o jogo do Impostor.`, ephemeral: true });
+                await initialInteractionReply.edit({ content: `The diary of **${targetLetterboxdUsername}** does not contain enough films (at least 1 hated and ${NUMBER_OF_OPTIONS - 1} loved) to start the Impostor game.`, ephemeral: true });
                 return;
             }
 
-            // Selecionar o filme impostor aleatoriamente
+            // Select the impostor film randomly
             const impostorMovieEntry = hatedFilms[Math.floor(Math.random() * hatedFilms.length)];
 
-            // Selecionar (NUMBER_OF_OPTIONS - 1) filmes amados aleatoriamente
+            // Select (NUMBER_OF_OPTIONS - 1) loved films randomly
             const selectedLovedFilms = [];
             const lovedFilmSlugs = new Set(); 
             
@@ -141,18 +141,18 @@ export default {
             }
             
             if (selectedLovedFilms.length < (NUMBER_OF_OPTIONS - 1)) {
-                 await initialInteractionReply.edit({ content: `Não foi possível encontrar filmes amados únicos o suficiente para **${targetDiscordUser.displayName || targetDiscordUser.username}** para iniciar o jogo do Impostor.`, ephemeral: true });
+                 await initialInteractionReply.edit({ content: `Could not find enough unique loved films for **${targetDiscordUser.displayName || targetDiscordUser.username}** to start the Impostor game.`, ephemeral: true });
                  return;
             }
 
-            // Combine todos os filmes (impostor + amados)
+            // Combine all films (impostor + loved)
             const allGameMovieEntries = [impostorMovieEntry, ...selectedLovedFilms];
             
-            // Buscar detalhes do TMDB para cada filme (necessário para sinopse/poster/ID)
+            // Fetch TMDB details for each film (needed for synopsis/poster/ID)
             const tmdbMoviePromises = allGameMovieEntries.map(entry => searchMovieTMDB(entry.title, entry.year)); //
             const tmdbMovies = await Promise.all(tmdbMoviePromises);
 
-            // Filtrar falhas na busca TMDB e garantir que temos todos os dados necessários
+            // Filter out failed TMDB searches and ensure we have all necessary data
             const gameMovies = tmdbMovies.filter(m => 
                 m !== null && 
                 m.id && 
@@ -162,24 +162,24 @@ export default {
             );
             
             if (gameMovies.length < NUMBER_OF_OPTIONS) { 
-                await initialInteractionReply.edit({ content: `Não foi possível obter detalhes suficientes (título, sinopse, pôster) do TMDB para ${NUMBER_OF_OPTIONS} filmes. Tente novamente mais tarde ou escolha outro usuário.`, ephemeral: true });
+                await initialInteractionReply.edit({ content: `Could not get enough details (title, synopsis, poster) from TMDB for ${NUMBER_OF_OPTIONS} films. Please try again later or choose another user.`, ephemeral: true });
                 return;
             }
 
-            // --- DEBGUANDO O MAPEAR O FILME IMPOSTOR ---
+            // --- DEBUGGING THE IMPOSTOR MOVIE MAPPING ---
             console.log(`[Impostor Debug] Impostor from Letterboxd: Title='${impostorMovieEntry.title}', Year='${impostorMovieEntry.year}', Rating=${impostorMovieEntry.rating}`);
             console.log(`[Impostor Debug] Normalized Impostor Title: '${normalizeString(impostorMovieEntry.title)}'`);
             console.log(`[Impostor Debug] TMDB Game Movies obtained:`);
             gameMovies.forEach(m => console.log(`  - ${m.title} (${getYearFromReleaseDate(m.release_date)}) - Normalized: '${normalizeString(m.title)}'`));
 
-            // Busque o filme impostor de forma mais robusta usando título e ano
+            // Search for the impostor film more robustly using title and year
             let impostorTmdbMovie = gameMovies.find(m => {
                 const tmdbYear = getYearFromReleaseDate(m.release_date);
                 const lbYear = impostorMovieEntry.year ? impostorMovieEntry.year.toString() : 'N/A';
                 return normalizeString(m.title) === normalizeString(impostorMovieEntry.title) && tmdbYear === lbYear;
             });
 
-            // Se o match primário falhar, tente apenas pelo título normalizado (menos preciso, mas pode funcionar como fallback)
+            // If the primary match fails, try by normalized title only (less accurate, but might work as fallback)
             if (!impostorTmdbMovie) {
                 console.warn(`[Impostor Debug] Impostor match by title+year failed. Trying by title only as fallback.`);
                 impostorTmdbMovie = gameMovies.find(m => normalizeString(m.title) === normalizeString(impostorMovieEntry.title));
@@ -188,54 +188,54 @@ export default {
 
             if (!impostorTmdbMovie) {
                 console.error(`[Impostor Error] Final failure to map impostor. Original LB Entry: ${JSON.stringify(impostorMovieEntry)}. TMDB GameMovies found: ${JSON.stringify(gameMovies.map(m => ({id: m.id, title: m.title, year: getYearFromReleaseDate(m.release_date)})))}`);
-                 await initialInteractionReply.edit({ content: `Erro interno: Não foi possível mapear o filme impostor para os dados do TMDB. Isso pode ocorrer por pequenas diferenças de título ou ano entre Letterboxd e TMDB, ou se a busca TMDB falhou especificamente para o filme odiado. Por favor, tente novamente.`, ephemeral: true });
+                 await initialInteractionReply.edit({ content: `Internal error: Could not map the impostor film to TMDB data. This might occur due to small title or year differences between Letterboxd and TMDB, or if the TMDB search specifically failed for the hated film. Please try again.`, ephemeral: true });
                  return;
             }
 
-            // GameMovies já contém os 10 filmes (1 impostor, 9 amados)
-            // É CRUCIAL EMBARALHAR AQUI PARA QUE O IMPOSTOR NÃO SEJA SEMPRE O PRIMEIRO!
+            // GameMovies already contains the 10 films (1 impostor, 9 loved)
+            // IT IS CRUCIAL TO SHUFFLE HERE SO THE IMPOSTOR ISN'T ALWAYS THE FIRST!
             for (let i = gameMovies.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [gameMovies[i], gameMovies[j]] = [gameMovies[j], gameMovies[i]];
             }
 
-            const impostorCustomId = `impostor_game_${channelId}`; // ID único para o select menu
+            const impostorCustomId = `impostor_game_${channelId}`; // Unique ID for the select menu
 
-            // Criar o Select Menu com as opções de filme (10 filmes)
+            // Create the Select Menu with movie options (10 films)
             const selectMenuOptions = gameMovies.map((movie, index) => ({
-                label: `${index + 1}. ${movie.title}`, // REMOVIDO: (${getYearFromReleaseDate(movie.release_date)})
-                value: movie.id.toString(), // Valor é o TMDB ID
+                label: `${index + 1}. ${movie.title}`, // REMOVED: (${getYearFromReleaseDate(movie.release_date)})
+                value: movie.id.toString(), // Value is the TMDB ID
             }));
 
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId(impostorCustomId)
-                .setPlaceholder('Qual desses filmes o(a) usuário(a) odiou?');
+                .setPlaceholder('Which of these movies did the user hate?');
 
             if (selectMenuOptions.length > 0) {
                  selectMenu.addOptions(selectMenuOptions);
             } else {
-                 await initialInteractionReply.edit({ content: `Não foi possível criar opções de select menu para o jogo.`, ephemeral: true });
+                 await initialInteractionReply.edit({ content: `Could not create select menu options for the game.`, ephemeral: true });
                  return;
             }
 
             const actionRow = new ActionRowBuilder()
                 .addComponents(selectMenu);
 
-            // Criar o embed inicial do jogo (com sinopses e pôsteres)
+            // Create the initial game embed (with synopses and posters)
             const impostorEmbed = new EmbedBuilder()
-                .setColor(0xEE4B2B) // Cor vermelha para o impostor
+                .setColor(0xEE4B2B) // Red color for the impostor
                 .setTitle(`🕵️‍♂️ The Impostor Game: Guess ${targetDiscordUser.displayName || targetDiscordUser.username}'s Hated Film! 🕵️‍♀️`)
-                .setDescription(`Entre os ${NUMBER_OF_OPTIONS} filmes abaixo, um foi avaliado com **1 estrela ou menos** por **${targetDiscordUser.displayName || targetDiscordUser.username}** no Letterboxd. Os outros foram avaliados com **4 estrelas ou mais**.\n\nEscolha o impostor no menu abaixo! Você tem **uma chance**.\n`);
+                .setDescription(`Among the ${NUMBER_OF_OPTIONS} films below, one was rated **1 star or less** by **${targetDiscordUser.displayName || targetDiscordUser.username}** on Letterboxd. The others were rated **4 stars or more**.\n\nChoose the impostor from the menu below! You have **one chance**.\n`);
 
-            // --- Remover fields e adicionar grade de pôsteres ---
+            // --- Remove fields and add poster grid ---
             const filmsForGridAndLinks = await Promise.all(gameMovies.map(async (movie) => {
                 let letterboxdFilmUrl = null;
-                // Tenta encontrar o filme no Letterboxd para obter a URL
+                // Try to find the film on Letterboxd to get the URL
                 const lbSearchResults = await searchLetterboxd(movie.title);
                 const lbFilmResult = lbSearchResults.find(r => 
                     r.type === 'film' && 
                     normalizeString(r.title) === normalizeString(movie.title) &&
-                    (movie.release_date ? getYearFromReleaseDate(movie.release_date) === getYearFromReleaseDate(r.year) : true) // Compara o ano de forma segura
+                    (movie.release_date ? getYearFromReleaseDate(movie.release_date) === getYearFromReleaseDate(r.year) : true) // Safely compare the year
                 );
 
                 if (lbFilmResult) {
@@ -244,48 +244,47 @@ export default {
                 
                 return {
                     title: movie.title,
-                    year: getYearFromReleaseDate(movie.release_date), // O ano será útil para o createGridImage nos slugs, se for usado
-                    slug: movie.id, // Será usado como fallback no createGridImage se o URL específico não for passado
-                    posterUrl: getTmdbPosterUrl(movie.poster_path, 'w342'), // Tamanho maior para a grade
-                    tmdbUrl: `https://www.themoviedb.org/movie/${movie.id}`, // Fallback para TMDB
-                    finalUrl: letterboxdFilmUrl || `https://www.themoviedb.org/movie/${movie.id}` // Link preferencial
+                    year: getYearFromReleaseDate(movie.release_date), // The year will be useful for createGridImage in slugs, if used
+                    slug: movie.id, // Will be used as fallback in createGridImage if the specific URL is not passed
+                    posterUrl: getTmdbPosterUrl(movie.poster_path, 'w342'), // Larger size for the grid
+                    tmdbUrl: `https://www.themoviedb.org/movie/${movie.id}`, // Fallback for TMDB
+                    finalUrl: letterboxdFilmUrl || `https://www.themoviedb.org/movie/${movie.id}` // Preferred link
                 };
             }));
 
-            // Usar createGridImage para gerar a imagem da grade
+            // Use createGridImage to generate the grid image
             const { embed: gridEmbed, attachment: gridAttachment } = await createGridImage(
                 filmsForGridAndLinks, 
-                `Filmes do Jogo do Impostor para ${targetDiscordUser.displayName || targetDiscordUser.username}`, 
-                5, // 5 colunas
-                2  // 2 linhas (para 10 filmes)
+                `Impostor Game Films for ${targetDiscordUser.displayName || targetDiscordUser.username}`, 
+                5, // 5 columns
+                2  // 2 rows (for 10 films)
             );
 
-            // Substituir o embed principal pelo gridEmbed e adicionar o texto do impostor acima dele
-            // O embed principal agora terá a descrição do jogo e a imagem da grade.
-            // Os fields individuais serão removidos para não duplicar informações e simplificar.
-            impostorEmbed.setImage(`attachment://${gridAttachment.name}`); // Define a imagem para o embed principal
-            impostorEmbed.setFields([]); // Remove todos os campos, incluindo os de sinopse/ano
-
+            // Replace the main embed with gridEmbed and add the impostor text above it
+            // The main embed will now have the game description and the grid image.
+            // Individual fields will be removed to avoid duplicating information and simplify.
+            impostorEmbed.setImage(`attachment://${gridAttachment.name}`); // Set the image for the main embed
+            impostorEmbed.setFields([]); // Remove all fields, including synopsis/year
 
             const impostorMessage = await interaction.editReply({ 
                 embeds: [impostorEmbed], 
                 components: [actionRow], 
-                files: [gridAttachment] // Anexa a imagem da grade
+                files: [gridAttachment] // Attach the grid image
             });
 
-            // Armazenar os dados do jogo no mapa de jogos ativos
+            // Store game data in the active games map
             activeImpostorGames.set(channelId, {
                 targetUserId: targetDiscordUser.id,
                 correctImpostorMovieId: impostorTmdbMovie.id.toString(),
                 timeoutId: setTimeout(async () => {
-                    const resultEmbed = revealImpostorAnswer(impostorTmdbMovie, null, false); // Ninguém acertou
+                    const resultEmbed = revealImpostorAnswer(impostorTmdbMovie, null, false); // Nobody guessed
                     await impostorMessage.edit({ embeds: [resultEmbed], components: [] }).catch(console.error);
                     activeImpostorGames.delete(channelId);
                 }, IMPOSTOR_TIMEOUT_MS),
-                guessedUsers: new Set() // Para registrar quem já tentou
+                guessedUsers: new Set() // To record who has already tried
             });
 
-            // 6. Coletar interações do Select Menu
+            // 6. Collect Select Menu interactions
             const collectorFilter = i => i.customId === impostorCustomId;
             
             const collector = impostorMessage.createMessageComponentCollector({ filter: collectorFilter, time: IMPOSTOR_TIMEOUT_MS });
@@ -295,31 +294,31 @@ export default {
                 const session = activeImpostorGames.get(channelId);
 
                 if (!session) { 
-                    await i.reply({ content: 'Este jogo do Impostor não está mais ativo.', ephemeral: true });
+                    await i.reply({ content: 'This Impostor game is no longer active.', ephemeral: true });
                     return;
                 }
 
-                // Verificar se o usuário já tentou (apenas uma chance por jogador)
+                // Check if the user has already tried (only one chance per player)
                 if (session.guessedUsers.has(i.user.id)) {
-                    await i.reply({ content: 'Você já fez seu palpite neste jogo. Apenas uma chance por jogador!', ephemeral: true });
+                    await i.reply({ content: 'You have already made your guess in this game. Only one chance per player!', ephemeral: true });
                     return;
                 }
                 session.guessedUsers.add(i.user.id); 
 
                 if (selectedMovieId === session.correctImpostorMovieId) {
-                    // Acertou!
+                    // Correct!
                     clearTimeout(session.timeoutId);
                     activeImpostorGames.delete(channelId);
 
-                    const resultEmbed = revealImpostorAnswer(impostorTmdbMovie, i.user, true); // Acertou
+                    const resultEmbed = revealImpostorAnswer(impostorTmdbMovie, i.user, true); // Correct
                     
-                    await i.update({ embeds: [resultEmbed], components: [] }); // Atualiza a mensagem original
-                    collector.stop(); // Encerra o coletor
+                    await i.update({ embeds: [resultEmbed], components: [] }); // Update the original message
+                    collector.stop(); // Stop the collector
                 } else {
-                    // Errou!
-                    clearTimeout(session.timeoutId); // Termina o jogo
+                    // Incorrect!
+                    clearTimeout(session.timeoutId); // End the game
                     activeImpostorGames.delete(channelId);
-                    const resultEmbed = revealImpostorAnswer(impostorTmdbMovie, i.user, false); // Errou
+                    const resultEmbed = revealImpostorAnswer(impostorTmdbMovie, i.user, false); // Incorrect
                     await i.update({ embeds: [resultEmbed], components: [] });
                     collector.stop();
                 }
@@ -329,7 +328,7 @@ export default {
                 if (!activeImpostorGames.has(channelId)) return; 
 
                 const session = activeImpostorGames.get(channelId);
-                const resultEmbed = revealImpostorAnswer(impostorTmdbMovie, null, false); // Tempo esgotado
+                const resultEmbed = revealImpostorAnswer(impostorTmdbMovie, null, false); // Time ran out
                 
                 await impostorMessage.edit({ embeds: [resultEmbed], components: [] }).catch(console.error);
                 activeImpostorGames.delete(channelId);
@@ -337,19 +336,19 @@ export default {
 
         } catch (error) {
             console.error(`Error executing /impostor command for ${targetDiscordUser.tag}:`, error);
-            let errorMessage = `Ocorreu um erro ao configurar o jogo do Impostor. Detalhes: ${error.message}`;
+            let errorMessage = `An error occurred while setting up the Impostor game. Details: ${error.message}`;
             if (error.message.includes('Profile is Private')) {
-                errorMessage = `O perfil do Letterboxd de **${targetLetterboxdUsername}** é privado. Não é possível acessar os dados.`;
+                errorMessage = `The Letterboxd profile of **${targetLetterboxdUsername}** is private. Cannot access data.`;
             } else if (error.message.includes('User not found')) {
-                errorMessage = `O usuário do Letterboxd **${targetLetterboxdUsername}** não foi encontrado.`;
-            } else if (error.message.includes('Não foi possível obter detalhes suficientes')) { 
-                 errorMessage = `Não foi possível encontrar filmes amados ou odiados suficientes com detalhes completos para iniciar o jogo.`;
-            } else if (error.message.includes('Não foi possível mapear o filme impostor')) { 
-                 errorMessage = `Não foi possível mapear o filme impostor para os dados do TMDB. Isso pode ocorrer por pequenas diferenças de título ou ano.`;
+                errorMessage = `The Letterboxd user **${targetLetterboxdUsername}** was not found.`;
+            } else if (error.message.includes('Could not get enough details')) { 
+                 errorMessage = `Could not find enough loved or hated films with full details to start the game.`;
+            } else if (error.message.includes('Could not map the impostor film')) { 
+                 errorMessage = `Could not map the impostor film to TMDB data. This may occur due to small title or year differences.`;
             } else if (error.message.includes('Could not connect to Letterboxd')) { 
-                errorMessage = `Não foi possível conectar ao Letterboxd. Verifique a conexão do bot ou tente novamente mais tarde.`;
+                errorMessage = `Could not connect to Letterboxd. Check the bot's connection or try again later.`;
             }
-            // Envia a mensagem de erro detalhada efemera
+            // Send the detailed ephemeral error message
             await interaction.editReply({
                 content: errorMessage,
                 ephemeral: true 
