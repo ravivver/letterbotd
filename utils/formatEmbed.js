@@ -695,11 +695,11 @@ async function createQuizEmbed(movie, contentType, getTmdbPosterUrlFn) {
         .setColor(0x7289DA) // Discord's blurple color
         .setTitle('🎬 Guess the Movie! 🍿');
 
-    let descriptionContent = ''; // Usar uma nova variável para o conteúdo da descrição
-    let hasImage = false; // Flag para verificar se há imagem
+    let descriptionContent = ''; // Use a new variable for description content
+    let hasImage = false; // Flag to check if there's an image
 
     if (contentType === 'synopsis' || contentType === 'both') {
-        descriptionContent = movie.overview ? movie.overview.substring(0, 1000) + (movie.overview.length > 1000 ? '...' : '') : ''; // Não preenche com "No synopsis available." aqui ainda
+        descriptionContent = movie.overview ? movie.overview.substring(0, 1000) + (movie.overview.length > 1000 ? '...' : '') : ''; // Don't fill with "No synopsis available." yet
     }
 
     if (contentType === 'poster' || contentType === 'both') {
@@ -710,7 +710,7 @@ async function createQuizEmbed(movie, contentType, getTmdbPosterUrlFn) {
         }
     }
 
-    // Lógica para garantir que a descrição nunca seja vazia e inclua a dica do tempo
+    // Logic to ensure the description is never empty and includes the time hint
     let finalDescription = '';
     if (descriptionContent.trim().length > 0) {
         finalDescription = descriptionContent;
@@ -718,14 +718,14 @@ async function createQuizEmbed(movie, contentType, getTmdbPosterUrlFn) {
         finalDescription = 'No synopsis available for this movie.';
     } else if (contentType === 'poster' && !hasImage) {
         finalDescription = 'No poster available for this movie.';
-    } else { // Caso fallback para qualquer cenário que ainda esteja vazio
+    } else { // Fallback for any scenario that is still empty
         finalDescription = 'No clues available for this movie.';
     }
 
     finalDescription += '\n\nYou have 30 seconds! Type your guess in the chat.';
     
     embed.setDescription(finalDescription);
-    embed.setFooter(null); // Garante que o footer não seja duplicado, pois a dica está na descrição
+    embed.setFooter(null); // Ensures footer is not duplicated, as the hint is in the description
 
     return embed;
 }
@@ -757,7 +757,7 @@ async function revealQuizAnswer(movie, correctGuesser, finalFilmUrl, getTmdbPost
         description += '**Time\'s up! Nobody guessed correctly this time.** 😔';
     }
 
-    // A descrição de revelação também deve garantir não ser vazia
+    // The reveal description should also ensure it's not empty
     embed.setDescription(description.length > 0 ? description : ' ');
 
     return embed;
@@ -791,19 +791,19 @@ function createTasteEmbed(
 
     let description = `Comparing **[${lbUsername1}](https://letterboxd.com/${lbUsername1}/)** and **[${lbUsername2}](https://letterboxd.com/${lbUsername2}/)**:\n`; 
     
-    // Lógica para adicionar emoji baseado na porcentagem
+    // Logic to add emoji based on percentage
     let compatibilityEmoji = '';
     if (compatibilityPercentage > 90) {
         compatibilityEmoji = '❤️';
-    } else if (compatibilityPercentage >= 70) { // Entre 70 e 90%
+    } else if (compatibilityPercentage >= 70) { // Between 70 and 90%
         compatibilityEmoji = '✌️';
-    } else if (compatibilityPercentage >= 50) { // Entre 50 e 70%
+    } else if (compatibilityPercentage >= 50) { // Between 50 and 70%
         compatibilityEmoji = '💀';
-    } else { // Menos de 50%
+    } else { // Less than 50%
         compatibilityEmoji = '💩';
     }
 
-    // A linha da porcentagem agora inclui o emoji
+    // The percentage line now includes the emoji
     description += `## **${compatibilityPercentage}% Compatibility ${compatibilityEmoji}**\n`;
     description += `Based on **${commonFilmsCount}** films watched by both users.\n\n`;
 
@@ -834,6 +834,45 @@ function createTasteEmbed(
     return embed;
 }
 
+/**
+ * Creates an embed to reveal the result of the Impostor game.
+ * @param {Object} impostorMovie The TMDB movie object that was the impostor.
+ * @param {Object|null} guesser Discord User object of the player who guessed, or null if timed out/no correct guess.
+ * @param {boolean} isCorrectGuess True if the guesser guessed correctly, false if they guessed wrong or null.
+ * @returns {EmbedBuilder} The configured EmbedBuilder for the Impostor game result.
+ */
+function revealImpostorAnswer(impostorMovie, guesser = null, isCorrectGuess = false) {
+    let title = '';
+    let color = 0xFF0000; // Default red for "nobody guessed" or "wrong guess"
+
+    if (isCorrectGuess) {
+        title = `🎉 Correct! ${guesser.displayName || guesser.username} Guessed the Impostor! 🎉`;
+        color = 0x00FF00; // Green for correct guess
+    } else if (guesser) { // Guessed, but wrong
+        title = `❌ Incorrect Guess, ${guesser.displayName || guesser.username}! ❌`;
+        color = 0xFFA500; // Orange for wrong guess
+    } else { // Timed out
+        title = `⏰ Time's Up! Nobody Guessed the Impostor! ⏰`;
+        color = 0xFF0000;
+    }
+
+    const embed = new EmbedBuilder()
+        .setColor(color)
+        .setTitle(title)
+        .setURL(`https://www.themoviedb.org/movie/${impostorMovie.id}`); // Link to TMDB of the impostor
+
+    if (impostorMovie.poster_path) {
+        embed.setThumbnail(getTmdbPosterUrl(impostorMovie.poster_path, 'w92'));
+    }
+
+    let description = `The impostor film was: **[${impostorMovie.title} (${new Date(impostorMovie.release_date).getFullYear() || 'N/A'})](https://www.themoviedb.org/movie/${impostorMovie.id})**!\n\n`;
+    description += `**Synopsis:** ${impostorMovie.overview ? impostorMovie.overview.substring(0, 500) + (impostorMovie.overview.length > 500 ? '...' : '') : 'N/A'}\n\n`;
+
+    embed.setDescription(description.length > 0 ? description : ' ');
+
+    return embed;
+}
+
 // --- FINAL EXPORT BLOCK OF ALL FUNCTIONS ---
 // Export all functions for use in other modules
 export {
@@ -849,5 +888,6 @@ export {
     createQuizEmbed,
     revealQuizAnswer,
     createLetterIDEmbed,
-    createTasteEmbed
+    createTasteEmbed,
+    revealImpostorAnswer
 };

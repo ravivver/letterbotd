@@ -85,7 +85,7 @@ export default {
                 return;
             }
 
-            // --- Lógica de Cálculo de Compatibilidade ---
+            // --- Compatibility Calculation Logic ---
             const user1Ratings = new Map();
             diary1.forEach(entry => {
                 if (entry.rating !== null && entry.slug) {
@@ -93,8 +93,8 @@ export default {
                 }
             });
 
-            const commonFilms = []; // Filmes que ambos assistiram e avaliaram
-            const ratingDifferences = []; // Diferenças de avaliação para filmes em comum
+            const commonFilms = []; // Films that both have watched and rated
+            const ratingDifferences = []; // Rating differences for common films
 
             diary2.forEach(entry => {
                 if (entry.rating !== null && entry.slug && user1Ratings.has(entry.slug)) {
@@ -126,16 +126,16 @@ export default {
                 compatibilityPercentage = Math.max(0, 100 - (averageDifference / maxPossibleDifference) * 100);
             }
             
-            // Arredonda a porcentagem para duas casas decimais
+            // Round the percentage to two decimal places
             compatibilityPercentage = parseFloat(compatibilityPercentage.toFixed(2));
 
-            // Para o embed, podemos pegar os 3 filmes com menor diferença e os 3 com maior diferença
+            // For the embed, we can take the 3 films with the smallest difference and the 3 with the largest difference
             commonFilms.sort((a, b) => a.difference - b.difference);
             const mostAgreedFilms = commonFilms.slice(0, 3);
             const mostDisagreedFilms = commonFilms.slice().reverse().slice(0, 3);
 
 
-            // Criar e enviar o embed de resultado
+            // Create and send the result embed
             const embed = createTasteEmbed(
                 discordUser1.displayName || discordUser1.username,
                 discordUser2.displayName || discordUser2.username,

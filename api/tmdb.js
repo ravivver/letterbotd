@@ -58,6 +58,7 @@ async function searchMovieTMDB(query, year = null) {
             vote_average: movie.vote_average, 
             genres: movie.genres ? movie.genres.map(g => g.name) : [],
             directors: directors || [],
+            release_date: movie.release_date // ADICIONADO: Inclui a data de lançamento
         };
     } catch (error) {
         console.error(`Error searching movie on TMDB for "${query}" (${year}):`, error.message); 
@@ -268,7 +269,7 @@ async function discoverMoviesTMDB(filters = {}, page = 1) {
         return response.data.results.map(movie => ({
             id: movie.id,
             title: movie.title,
-            release_date: movie.release_date,
+            release_date: movie.release_date, // ADICIONADO: Inclui a data de lançamento
             overview: movie.overview,
             poster_path: movie.poster_path,
             vote_average: movie.vote_average,

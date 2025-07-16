@@ -5,7 +5,7 @@ import { discoverMoviesTMDB, getTmdbPosterUrl } from '../api/tmdb.js';
 import { createQuizEmbed, revealQuizAnswer } from '../utils/formatEmbed.js';
 import { searchLetterboxd } from '../scraper/searchLetterboxd.js';
 
-const activeQuizzes = new Map(); // Usa Map para armazenar channelId -> correctMovieId
+const activeQuizzes = new Map(); // Uses Map to store channelId -> correctMovieId
 
 function normalizeString(str) {
     if (!str) return '';
