@@ -32,21 +32,55 @@ Using web scraping offers the flexibility to extract necessary information direc
 
 Here is the full list of commands:
 
-- **`/link [username]`**: Links your Discord account to a Letterboxd profile.
-- **`/unlink`**: Unlinks your account.
-- **`/search film: [term]`**: Searches for a movie or director.
-- **`/check user: [user] film: [film]`**: Checks if a user has watched a specific film.
-- **`/profile [user]`**: Displays general statistics of a Letterboxd profile.
-- **`/favorites [user]`**: Shows the 4 favorite movies of a user in a list and grid.
-- **`/diary [user] [day] [month] [year]`**: Shows the films watched on a specific date.
-- **`/review [user] [film]`**: Displays the latest or a specific review.
-- **`/grid [user]`**: Generates a movie poster grid (liked or watched).
-- **`/compare user1: [@user] [user2: @user]`**: Compares and lists common films between two users, with pagination.
-- **`/hint [user]`**: Suggests a random movie from a user’s watchlist.
-- **`/top`**: Shows the top 5 most watched movies among users who used `/sync`.
-- **`/sync`**: Syncs your Letterboxd diary to feed the server ranking.
-- **`/last`**: Shows the latest movie watched by a user on Letterboxd.
-- **`/help`**: Displays this list of commands.
+### 🧩 Essential Commands (must be configured first)
+
+- **`/link [username]`**: 🔗 Links your Discord account to a Letterboxd profile.
+- **`/unlink`**: 🔓 Unlinks your account.
+- **`/setchannel`**: 📢 Sets the channel for daily watched film notifications.
+- **`/sync`**: 🔄 Syncs your Letterboxd diary to feed the server ranking.
+- **`/help`**: ❓ Displays this list of commands.
+
+---
+
+### 🎬 User & Movie Commands
+
+- **`/search film: [term]`**: 🔍 Searches for a movie or director.
+- **`/check user: [user] film: [film]`**: ✔️ Checks if a user has watched a specific film.
+- **`/profile [user]`**: 🧾 Displays general statistics of a Letterboxd profile.
+- **`/favorites [user]`**: 💖 Shows the 4 favorite movies of a user in a list and grid.
+- **`/diary [user] [day] [month] [year]`**: 🗓️ Shows the films watched on a specific date.
+- **`/review [user] [film]`**: 📝 Displays the latest or a specific review.
+- **`/grid [user]`**: 🖼️ Generates a movie poster grid (liked or watched).
+- **`/last`**: 🎞️ Shows the latest movie watched by a user on Letterboxd.
+
+---
+
+### 🔍 Discovery & Comparison
+
+- **`/compare user1: [@user] [user2: @user]`**: 📊 Compares and lists common films between two users, with pagination.
+- **`/hint [user]`**: 🎲 Suggests a random movie from a user’s watchlist.
+- **`/top`**: 🏆 Shows the top 5 most watched movies among users who used `/sync`.
+- **`/topbot`**: 🥇 Displays the top 5 most watched films across all servers.
+
+---
+
+### 🧠 Interactive & Social Features
+
+- **`/quiz`**: 🎯 A quick game where the bot shows a synopsis, a poster, or a quote, and users must guess the correct movie.
+- **`/taste`**: 💞 Analyzes taste compatibility between two users (from 0 to 100%).
+- **`/familymatch`**: 👪 One user starts, others join (up to 5 total), and the bot finds a movie suitable for all to watch together.
+- **`/impostor`**: 🕵️ The bot shows 4 films a user apparently loved, but one is rated 1 star or less — others must guess which one is the fake.
+
+---
+
+### 🎶 Other Tools
+
+- **`/soundtrack`**: 🎼 Returns the film's soundtrack or composer.
+- **`/similar`**: 🧠 Recommends similar films based on one given.
+- **`/trip`**: 🌍 Suggests a film with filters (year, genre, or country).
+- **`/letterid`**: 🪪 Generates a “cinephile ID card” for the user.
+
+
 
 ## 🔧 Setup and Installation
 
