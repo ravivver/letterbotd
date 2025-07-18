@@ -118,7 +118,7 @@ export async function handleJoinButton(interaction) {
     session.participants.add(interaction.user);
     console.log(`[FamilyMatch] ${interaction.user.tag} joined the queue in channel ${channelId}.`);
 
-    const currentParticipantsList = Array.from(session.participants).map(u => `👤｢ ${u.displayName || u.username}`).join('\n');
+    const currentParticipantsList = Array.from(session.participants).map(u => `👥｢ ${u.displayName || u.username}`).join('\n');
     const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0])
         .setDescription(
             `**${interaction.guild.members.cache.get(session.ownerId)?.displayName || 'Someone'}** has opened a queue to find a movie for the group!\n\n` +
