@@ -1,4 +1,3 @@
-// scraper/getFullDiary.js (With viewing_id - Translated to English)
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
@@ -9,7 +8,7 @@ export async function getFullDiary(username) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     };
 
-    console.log(`[Scraper] Starting full diary fetch for ${username}...`); // Translated
+    console.log(`[Scraper] Starting full diary fetch for ${username}...`);
 
     while (true) {
         const url = `https://letterboxd.com/${username}/films/diary/page/${page}/`;
@@ -20,7 +19,7 @@ export async function getFullDiary(username) {
             const diaryRows = $('tr.diary-entry-row');
 
             if (diaryRows.length === 0) {
-                console.log(`[Scraper] Finished. Found ${allDiaryEntries.length} entries on ${page - 1} pages for ${username}.`); // Translated
+                console.log(`[Scraper] Finished. Found ${allDiaryEntries.length} entries on ${page - 1} pages for ${username}.`);
                 break; 
             }
 
@@ -40,7 +39,6 @@ export async function getFullDiary(username) {
                     }
                 }
 
-                // --- DATE AND VIEWING_ID EXTRACTION ---
                 const dateLinkHref = row.find('td.td-day a').attr('href'); 
                 const viewingId = row.attr('data-viewing-id'); 
                 
@@ -52,20 +50,20 @@ export async function getFullDiary(username) {
                         formattedDate = `${dateParts[1]}-${dateParts[2]}-${dateParts[3]}`;
                         try {
                             new Date(formattedDate); 
-                            console.log(`[Scraper Debug] Entry ${i} - Title: ${title}, Viewing ID: '${viewingId}', Formatted Date: '${formattedDate}'`); // Translated
+                            console.log(`[Scraper Debug] Entry ${i} - Title: ${title}, Viewing ID: '${viewingId}', Formatted Date: '${formattedDate}'`);
                         } catch (e) {
-                            console.warn(`[Scraper] Error creating Date object for '${formattedDate}' of '${title}': ${e.message}. Using null.`); // Translated
+                            console.warn(`[Scraper] Error creating Date object for '${formattedDate}' of '${title}': ${e.message}. Using null.`);
                             formattedDate = null;
                         }
                     } else {
-                        console.warn(`[Scraper] Unexpected date format in href for '${title}': '${dateLinkHref}'. Using null.`); // Translated
+                        console.warn(`[Scraper] Unexpected date format in href for '${title}': '${dateLinkHref}'. Using null.`);
                     }
                 } else {
-                    console.warn(`[Scraper] Day link (td.td-day a) not found for '${title}'.`); // Translated
+                    console.warn(`[Scraper] Day link (td.td-day a) not found for '${title}'.`);
                 }
 
                 if (!viewingId || !formattedDate) { 
-                    console.warn(`[Scraper] Skipping entry '${title}' due to invalid/missing Viewing ID or date.`); // Translated
+                    console.warn(`[Scraper] Skipping entry '${title}' due to invalid/missing Viewing ID or date.`);
                     return true; 
                 }
 
@@ -77,10 +75,10 @@ export async function getFullDiary(username) {
             page++; 
         } catch (error) {
             if (error.response && error.response.status === 404) {
-                console.log(`[Scraper] Finished on page ${page}. Found ${allDiaryEntries.length} entries in total for ${username}.`); // Translated
+                console.log(`[Scraper] Finished on page ${page}. Found ${allDiaryEntries.length} entries in total for ${username}.`);
                 break;
             }
-            console.error(`[Scraper] Fatal error during diary fetch on page ${page} for ${username}:`, error.message); // Translated
+            console.error(`[Scraper] Fatal error during diary fetch on page ${page} for ${username}:`, error.message);
             console.error(error); 
             break; 
         }

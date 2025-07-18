@@ -1,11 +1,8 @@
-// commands/compare.js (Version with corrected import path - Translated to English)
-
 import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// CHANGED: Corrected path to exit 'commands' folder (../) before entering 'scraper'
 import { getFullDiary } from '../scraper/getFullDiary.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,14 +13,14 @@ const ITEMS_PER_PAGE = 10;
 
 export const data = new SlashCommandBuilder()
     .setName('compare')
-    .setDescription('Compares watched movies between two users.') // Translated
+    .setDescription('Compares watched movies between two users.')
     .addUserOption(option =>
         option.setName('user1')
-        .setDescription('The first user to compare.') // Translated
+        .setDescription('The first user to compare.')
         .setRequired(true))
     .addUserOption(option =>
         option.setName('user2')
-        .setDescription('The second user to compare (default: yourself).') // Translated
+        .setDescription('The second user to compare (default: yourself).')
         .setRequired(false));
 
 export async function execute(interaction) {
@@ -31,14 +28,14 @@ export async function execute(interaction) {
     const user2 = interaction.options.getUser('user2') || interaction.user;
 
     if (user1.id === user2.id) {
-        return interaction.reply({ content: 'You cannot compare yourself with yourself!', flags: [MessageFlags.Ephemeral] }); // Translated
+        return interaction.reply({ content: 'You cannot compare yourself with yourself!', flags: [MessageFlags.Ephemeral] });
     }
 
     let usersData;
     try {
         usersData = JSON.parse(await fs.readFile(usersFilePath, 'utf8'));
     } catch (error) {
-        return interaction.reply({ content: 'Error reading user file.', flags: [MessageFlags.Ephemeral] }); // Translated
+        return interaction.reply({ content: 'Error reading user file.', flags: [MessageFlags.Ephemeral] });
     }
 
     const getLbUsername = (discordUser) => {
@@ -51,11 +48,11 @@ export async function execute(interaction) {
     const lbUser1 = getLbUsername(user1);
     const lbUser2 = getLbUsername(user2);
 
-    if (!lbUser1) return interaction.reply({ content: `User ${user1.displayName} has not linked an account.`, flags: [MessageFlags.Ephemeral] }); // Translated
-    if (!lbUser2) return interaction.reply({ content: `User ${user2.displayName} has not linked an account.`, flags: [MessageFlags.Ephemeral] }); // Translated
+    if (!lbUser1) return interaction.reply({ content: `User ${user1.displayName} has not linked an account.`, flags: [MessageFlags.Ephemeral] });
+    if (!lbUser2) return interaction.reply({ content: `User ${user2.displayName} has not linked an account.`, flags: [MessageFlags.Ephemeral] });
 
     await interaction.deferReply();
-    await interaction.editReply(`Fetching and comparing diaries of **${lbUser1}** and **${lbUser2}**. This may take a few minutes...`); // Translated
+    await interaction.editReply(`Fetching and comparing diaries of **${lbUser1}** and **${lbUser2}**. This may take a few minutes...`);
 
     try {
         const [diary1, diary2] = await Promise.all([
@@ -64,7 +61,7 @@ export async function execute(interaction) {
         ]);
 
         if (diary1.length === 0 || diary2.length === 0) {
-            return interaction.editReply('One or both users have no movies in their diary.'); // Translated
+            return interaction.editReply('One or both users have no movies in their diary.');
         }
 
         const diary2Slugs = new Map(diary2.map(film => [film.slug, film]));
@@ -78,7 +75,7 @@ export async function execute(interaction) {
         }
 
         if (commonFilms.length === 0) {
-            return interaction.editReply(`No common movies found between **${lbUser1}** and **${lbUser2}**.`); // Translated
+            return interaction.editReply(`No common movies found between **${lbUser1}** and **${lbUser2}**.`);
         }
 
         let currentPage = 0;
@@ -96,7 +93,7 @@ export async function execute(interaction) {
 
         collector.on('collect', async i => {
             if (i.user.id !== interaction.user.id) {
-                return i.reply({ content: 'Only the command initiator can navigate through pages.', ephemeral: true }); // Translated
+                return i.reply({ content: 'Only the command initiator can navigate through pages.', ephemeral: true });
             }
 
             if (i.customId === 'prev_page') currentPage--;
@@ -113,8 +110,8 @@ export async function execute(interaction) {
         });
 
     } catch (error) {
-        console.error('Error in /compare command:', error); // Translated
-        await interaction.editReply({ content: `An error occurred while comparing diaries: ${error.message}` }); // Translated
+        console.error('Error in /compare command:', error);
+        await interaction.editReply({ content: `An error occurred while comparing diaries: ${error.message}` });
     }
 }
 
@@ -133,13 +130,13 @@ function generateCompareEmbed(page, totalPages, commonFilms, user1, user2) {
         .map(film => `• **[${film.title} (${film.year || '????'})](https://letterboxd.com/film/${film.slug}/)**\n  └ ${user1.displayName}: ${formatRating(film.rating1)} | ${user2.displayName}: ${formatRating(film.rating2)}`)
         .join('\n\n');
 
-    const description = `**Mutuals: ${commonFilms.length}**\n\n${filmListString}`; // Translated
+    const description = `**Mutuals: ${commonFilms.length}**\n\n${filmListString}`;
 
     return new EmbedBuilder()
         .setColor(0x00E054)
-        .setTitle(`Comparing ${user1.displayName} and ${user2.displayName}`) // Translated
+        .setTitle(`Comparing ${user1.displayName} and ${user2.displayName}`)
         .setDescription(description)
-        .setFooter({ text: `Page ${page + 1} of ${totalPages}` }); // Translated
+        .setFooter({ text: `Page ${page + 1} of ${totalPages}` });
 }
 
 function generateButtons(page, totalPages, disabled = false) {

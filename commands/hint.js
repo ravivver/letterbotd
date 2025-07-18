@@ -1,11 +1,8 @@
-// commands/hint.js (Versão com menu interativo e resposta final pública)
-
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ActionRowBuilder } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Importa os scrapers necessários
 import { getWatchlist } from '../scraper/getWatchlist.js';
 import getLikedFilms from '../scraper/getLikedFilms.js';
 import { getFullDiary } from '../scraper/getFullDiary.js';
@@ -48,8 +45,6 @@ export async function execute(interaction) {
         return interaction.reply({ content: `${who} a Letterboxd account. Use /link.`, flags: [MessageFlags.Ephemeral] });
     }
 
-    // --- Criar o menu de seleção ---
-
     const selectMenu = new StringSelectMenuBuilder()
         .setCustomId('hint_source_select')
         .setPlaceholder('Select a source for the hint...') 
@@ -67,14 +62,11 @@ export async function execute(interaction) {
 
     const actionRow = new ActionRowBuilder().addComponents(selectMenu);
 
-    // Resposta inicial efêmera para o menu de seleção
     await interaction.reply({
         content: `Please select the source of the movie suggestion for ${letterboxdUsername}:`,
         components: [actionRow],
         ephemeral: true 
     });
-
-    // --- Aguardar a seleção do usuário ---
 
     let selectedSource = null;
     let componentInteraction = null;
@@ -87,7 +79,6 @@ export async function execute(interaction) {
 
         selectedSource = componentInteraction.values[0];
 
-        // Acknowledge the component interaction and remove the menu
         await componentInteraction.deferUpdate();
         await interaction.editReply({ content: 'Fetching suggestion...', components: [] });
 
@@ -100,8 +91,6 @@ export async function execute(interaction) {
         }
         return;
     }
-
-    // --- Processar a seleção e buscar a sugestão ---
 
     let filmSlugs = [];
     let sourceName = '';
@@ -122,14 +111,12 @@ export async function execute(interaction) {
         }
 
         if (!filmSlugs || filmSlugs.length === 0) {
-            // Se a lista estiver vazia, edite a mensagem efêmera com o erro e retorne.
             await interaction.editReply({ content: `${letterboxdUsername}'s ${sourceName} is empty or could not be accessed!` });
             return;
         }
 
         const randomSlug = filmSlugs[Math.floor(Math.random() * filmSlugs.length)];
 
-        // --- Buscar detalhes do filme e criar o embed ---
         const filmDetails = await getFilmDetailsFromSlug(randomSlug);
         if (!filmDetails) throw new Error('Could not retrieve details for the randomly selected movie from Letterboxd.');
         
@@ -148,12 +135,10 @@ export async function execute(interaction) {
             )
             .setImage(getTmdbPosterUrl(movieDataTMDB.poster_path, 'w500'))
         
-        // --- Enviar a resposta final publicamente usando followUp ---
         await interaction.followUp({ content: '', embeds: [finalEmbed] });
         
     } catch (error) {
         console.error('Error in /hint command:', error);
-        // Em caso de erro, edite a mensagem efêmera inicial para mostrar o erro ao usuário.
         await interaction.editReply({ content: `An error occurred while fetching the suggestion: ${error.message}` });
     }
 }

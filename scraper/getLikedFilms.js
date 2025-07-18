@@ -1,17 +1,9 @@
-// scraper/getLikedFilms.js
-
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-/**
- * Scrapes a user's liked films from Letterboxd, navigating through all pages.
- * @param {string} username The Letterboxd username.
- * @returns {Promise<Array<Object>>} An array of objects, each with the film's slug and URL.
- * Returns an empty array if no likes are found, the profile is private, or the user does not exist.
- */
 async function getLikedFilms(username) {
     if (!username) {
-        throw new Error('Letterboxd username is required.'); // Translated
+        throw new Error('Letterboxd username is required.');
     }
 
     let allLikedFilms = [];
@@ -21,7 +13,7 @@ async function getLikedFilms(username) {
     try {
         while (hasNextPage) {
             const url = `https://letterboxd.com/${username}/likes/films/page/${currentPage}/`;
-            console.log(`[Scraper - Likes] Fetching liked films from page ${currentPage} for ${username}...`); // Translated
+            console.log(`[Scraper - Likes] Fetching liked films from page ${currentPage} for ${username}...`);
 
             const response = await axios.get(url, {
                 headers: {
@@ -34,13 +26,12 @@ async function getLikedFilms(username) {
 
             const $ = cheerio.load(response.data);
 
-            // --- Page Error Checks ---
             const pageTitle = $('title').text();
             const mainContent = $('#content').text();
 
             if (mainContent.includes('Sorry, we can’t find the page you’ve requested.')) {
                 if (currentPage === 1) {
-                    throw new Error('Letterboxd user not found.'); // Translated
+                    throw new Error('Letterboxd user not found.');
                 } else {
                     hasNextPage = false;
                     break;
@@ -48,18 +39,17 @@ async function getLikedFilms(username) {
             }
 
             if (pageTitle.includes('Profile is Private') || mainContent.includes('This profile is private')) {
-                throw new Error('Letterboxd profile is private. Cannot access liked films.'); // Translated
+                throw new Error('Letterboxd profile is private. Cannot access liked films.');
             }
 
             if (response.status === 404 && currentPage === 1) {
-                throw new Error('The Letterboxd page returned an unexpected 404 error on the first attempt.'); // Translated
+                throw new Error('The Letterboxd page returned an unexpected 404 error on the first attempt.');
             }
-            // --- End of Page Error Checks ---
 
             const likedFilmElements = $('ul.poster-list li .poster.film-poster[data-film-slug]');
 
             if (!likedFilmElements.length && currentPage === 1) {
-                console.log(`[Scraper - Likes] No liked films found on page 1 for "${username}" with the current selector.`); // Translated
+                console.log(`[Scraper - Likes] No liked films found on page 1 for "${username}" with the current selector.`);
                 return [];
             } else if (!likedFilmElements.length && currentPage > 1) {
                 hasNextPage = false;
@@ -98,7 +88,7 @@ async function getLikedFilms(username) {
                         url: filmUrlLetterboxd
                     });
                 } else {
-                    console.log(`[Scraper - Likes] Warning: Slug not found for a liked film on page ${currentPage}. Entry: ${entry.html().substring(0, 100)}...`); // Translated
+                    console.log(`[Scraper - Likes] Warning: Slug not found for a liked film on page ${currentPage}. Entry: ${entry.html().substring(0, 100)}...`);
                 }
             });
 
@@ -123,13 +113,13 @@ async function getLikedFilms(username) {
 
     } catch (error) {
         if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'UND_ERR_SOCKET') {
-            throw new Error('Could not connect to Letterboxd. Check your internet connection.'); // Translated
+            throw new Error('Could not connect to Letterboxd. Check your internet connection.');
         }
-        if (error.message.includes('Profile is Private') || error.message.includes('User not found')) { // Translated
+        if (error.message.includes('Profile is Private') || error.message.includes('User not found')) {
             throw error;
         }
-        console.error(`Unexpected error scraping user liked films for ${username}:`, error.message); // Translated
-        throw new Error(`An unexpected error occurred while fetching ${username}'s liked films. Please try again later. Details: ${error.message}`); // Translated
+        console.error(`Unexpected error scraping user liked films for ${username}:`, error.message);
+        throw new Error(`An unexpected error occurred while fetching ${username}'s liked films. Please try again later. Details: ${error.message}`);
     }
 }
 

@@ -1,24 +1,21 @@
-// index.js
-
 import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import fs from 'node:fs';
 import { config } from 'dotenv';
+import { checkDailyWatchedFilms } from './tasks/dailyWatchedChecker.js'; 
 
-// Import button handling functions from familymatch
 import { handleJoinButton, handleCloseButton } from './commands/familymatch.js';
 
-config(); // Load environment variables from .env
+config(); 
 
-const token = process.env.DISCORD_BOT_TOKEN; // .env variable name
+const token = process.env.DISCORD_BOT_TOKEN; 
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        // Add other intents if necessary for other functionalities
     ],
 });
 
@@ -37,15 +34,15 @@ for (const file of commandFiles) {
     import(commandUrl)
         .then(commandModule => {
             let command;
-            // Adapt loading logic for different export types (default or named/CommonJS)
             if (commandModule.default && typeof commandModule.default === 'object' && ('data' in commandModule.default || 'execute' in commandModule.default)) {
                 command = commandModule.default;
             } else {
-                command = commandModule; // Assume 'data' and 'execute' are directly in the module
+                command = commandModule; 
             }
 
             if ('data' in command && 'execute' in command) {
                 client.commands.set(command.data.name, command);
+                console.log(`[LOAD] Command loaded: ${command.data.name}`); 
             } else {
                 console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
             }
@@ -55,10 +52,19 @@ for (const file of commandFiles) {
         });
 }
 
-client.once(Events.ClientReady, c => {
+client.once(Events.ClientReady, async c => { 
     console.log(`Ready! Logged in as ${c.user.tag}`);
     console.log(`Bot is in ${c.guilds.cache.size} servers.`);
-    console.log(`Loaded ${client.commands.size} commands.`); 
+    console.log(`Loaded ${client.commands.size} commands.`);
+
+    console.log('[Scheduler] Executando a checagem diária na inicialização...');
+    await checkDailyWatchedFilms(client);
+
+    const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; 
+    setInterval(async () => {
+        console.log('[Scheduler] Executando a checagem diária agendada...');
+        await checkDailyWatchedFilms(client);
+    }, CHECK_INTERVAL_MS);
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -88,11 +94,6 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     } else if (interaction.isStringSelectMenu()) {
         if (interaction.customId.startsWith('movie_quiz_')) {
-            // The quiz handling logic with Select Menu should already be in quiz.js
-            // and using a MessageComponentCollector.
-            // This block here can be a fallback, but the main part is the collector.
-            // For now, we don't need specific logic here for the quiz,
-            // as quiz.js already manages its own interaction.
         }
     } else {
         return;

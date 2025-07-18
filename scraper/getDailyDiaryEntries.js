@@ -1,13 +1,6 @@
-// scraper/getDailyDiaryEntries.js
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-/**
- * Fetches diary entries for a specific day for a Letterboxd user.
- * @param {string} username The Letterboxd username.
- * @param {Date} date The Date object for the day to be checked.
- * @returns {Array<Object>} An array of diary entry objects for the day.
- */
 export async function getDailyDiaryEntries(username, date) {
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -20,7 +13,7 @@ export async function getDailyDiaryEntries(username, date) {
 
     const formattedDate = `${year}-${month}-${day}`; 
 
-    console.log(`[Scraper] Fetching diary for ${username} on ${formattedDate}...`); // Translated
+    console.log(`[Scraper] Fetching diary for ${username} on ${formattedDate}...`);
 
     try {
         const { data } = await axios.get(url, { headers });
@@ -56,10 +49,10 @@ export async function getDailyDiaryEntries(username, date) {
 
     } catch (error) {
         if (error.response && error.response.status === 404) {
-            console.log(`[Scraper] No entries found for ${username} on ${formattedDate}.`); // Translated
+            console.log(`[Scraper] No entries found for ${username} on ${formattedDate}.`);
             return [];
         }
-        console.error(`[Scraper] Error fetching diary for ${username} on ${formattedDate}:`, error.message); // Translated
+        console.error(`[Scraper] Error fetching diary for ${username} on ${formattedDate}:`, error.message);
         return [];
     }
 }

@@ -1,7 +1,5 @@
-// commands/unlink.js (Corrected Version - Translated to English)
-
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
-import fs from 'node:fs/promises';
+import fs from 'node:fs/promises'; 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url'; 
 
@@ -12,10 +10,9 @@ const usersFilePath = path.join(__dirname, '..', 'storage', 'users.json');
 
 export const data = new SlashCommandBuilder()
     .setName('unlink')
-    .setDescription('Unlinks your Letterboxd account from the bot.'); // Translated
+    .setDescription('Unlinks your Letterboxd account from the bot.');
 
 export async function execute(interaction) {
-    // Ephemeral deferral, as the final response is always ephemeral.
     await interaction.deferReply({ flags: MessageFlags.Ephemeral }); 
 
     const discordId = interaction.user.id;
@@ -30,9 +27,9 @@ export async function execute(interaction) {
             if (readError.code === 'ENOENT') {
                 users = {};
             } else {
-                console.error(`Error reading users.json: ${readError.message}`); // Translated
+                console.error(`Error reading users.json: ${readError.message}`);
                 await interaction.editReply({
-                    content: 'An internal error occurred while trying to read user links. Please try again later.', // Translated
+                    content: 'An internal error occurred while trying to read user links. Please try again later.',
                     flags: MessageFlags.Ephemeral 
                 });
                 return;
@@ -44,20 +41,20 @@ export async function execute(interaction) {
             await fs.writeFile(usersFilePath, JSON.stringify(users, null, 2), 'utf8'); 
 
             await interaction.editReply({
-                content: `Your Letterboxd account has been successfully unlinked!`, // Translated
+                content: `Your Letterboxd account has been successfully unlinked!`,
                 flags: MessageFlags.Ephemeral 
             });
         } else {
             await interaction.editReply({
-                content: `You do not have a Letterboxd account linked to unlink. Use \`/link\` to link one.`, // Translated
+                content: `You do not have a Letterboxd account linked to unlink. Use \`/link\` to link one.`,
                 flags: MessageFlags.Ephemeral 
             });
         }
 
     } catch (error) {
-        console.error(`Error processing /unlink command for ${userTag}:`, error); // Translated
+        console.error(`Error processing /unlink command for ${userTag}:`, error);
         await interaction.editReply({
-            content: `An unexpected error occurred while unlinking your account. Details: ${error.message}`, // Translated
+            content: `An unexpected error occurred while unlinking your account. Details: ${error.message}`,
             flags: MessageFlags.Ephemeral 
         });
     }

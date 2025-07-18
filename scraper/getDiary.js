@@ -1,23 +1,12 @@
-// scraper/getDiary.js
-
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-/**
- * Scrapes recently watched films from a Letterboxd user's diary.
- * Returns a list of films found on the first page of the diary.
- *
- * @param {string} username The Letterboxd username.
- * @returns {Promise<Array<Object>>} An array of objects, each with details of a watched film.
- * Returns an empty array if no films are found or in case of specific errors.
- * @throws {Error} Throws an error if the user is not found or the profile is private.
- */
 async function getRecentDiaryEntries(username) { 
     if (!username) {
-        throw new Error('Letterboxd username is required.'); // Translated
+        throw new Error('Letterboxd username is required.');
     }
 
-    const url = `https://letterboxd.com/${username}/films/diary/`; // URL always of the main page
+    const url = `https://letterboxd.com/${username}/films/diary/`;
     const films = [];
     let currentMonth = '';
     let currentYear = '';
@@ -34,22 +23,20 @@ async function getRecentDiaryEntries(username) {
 
         const $ = cheerio.load(response.data);
 
-        // --- Page Error Checks ---
         const pageTitle = $('title').text();
         const mainContent = $('#content').text(); 
 
         if (mainContent.includes('Sorry, we can’t find the page you’ve requested.')) { 
-            throw new Error('Letterboxd user not found.'); // Translated
+            throw new Error('Letterboxd user not found.');
         }
         
         if (pageTitle.includes('Profile is Private') || mainContent.includes('This profile is private')) {
-             throw new Error('Letterboxd profile is private. Cannot access diary.'); // Translated
+             throw new Error('Letterboxd profile is private. Cannot access diary.');
         }
 
         if (response.status === 404) {
-             throw new Error('The Letterboxd page returned an unexpected 404 error.'); // Translated
+             throw new Error('The Letterboxd page returned an unexpected 404 error.');
         }
-        // --- End of Page Error Checks ---
 
         $('.diary-entry-row').each((i, element) => {
             const entry = $(element);
@@ -132,20 +119,20 @@ async function getRecentDiaryEntries(username) {
         });
 
         if (films.length === 0) {
-            console.log(`Debug: No diary entries found for "${username}".`); // Translated
+            console.log(`Debug: No diary entries found for "${username}".`);
         }
 
         return films;
 
     } catch (error) {
         if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'UND_ERR_SOCKET') {
-            throw new Error('Could not connect to Letterboxd. Check your internet connection.'); // Translated
+            throw new Error('Could not connect to Letterboxd. Check your internet connection.');
         }
-        if (error.message.includes('Error accessing this user\'s Letterboxd.')) { // Translated
+        if (error.message.includes('Error accessing this user\'s Letterboxd.')) {
             throw error; 
         }
-        console.error(`Unexpected error scraping user diary for ${username}:`, error.message); // Translated
-        throw new Error(`An unexpected error occurred while fetching ${username}'s diary. Please try again later. Details: ${error.message}`); // Translated
+        console.error(`Unexpected error scraping user diary for ${username}:`, error.message);
+        throw new Error(`An unexpected error occurred while fetching ${username}'s diary. Please try again later. Details: ${error.message}`);
     }
 }
 

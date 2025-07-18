@@ -1,5 +1,3 @@
-// utils/formatEmbed.js
-
 import { EmbedBuilder, AttachmentBuilder } from 'discord.js';
 import { getTmdbPosterUrl } from '../api/tmdb.js';
 import sharp from 'sharp';
@@ -8,27 +6,17 @@ import QRCode from 'qrcode';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url'; 
 
-// Resolve __filename and __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure these paths are correct and the assets exist
 const idCardTemplatePath = path.join(__dirname, '..', 'assets', 'letterid_template.png');
 const signatureFontPath = path.join(__dirname, '..', 'assets', 'signature_font.ttf');
 
-// --- AUXILIARY FUNCTIONS ---
-
-/**
- * Formats a date string to "DD Mon YY" (e.g., "05 Jul 25").
- * @param {string} dateString The date string to format.
- * @returns {string} The formatted date or 'N/A'.
- */
 function formatDateEn(dateString) {
     if (!dateString) return 'N/A';
     let date;
     try {
         date = new Date(dateString);
-        // Handle potential invalid date formats (e.g., '05 Jul 2025' from scraping)
         if (isNaN(date.getTime())) {
             const parts = dateString.match(/(\d{2}) (\w{3}) (\d{4})/);
             if (parts) {
@@ -54,11 +42,6 @@ function formatDateEn(dateString) {
     return `${day} ${month.charAt(0).toUpperCase() + month.slice(1)} ${yearShort}`;
 }
 
-/**
- * Converts a numeric rating to a star emoji representation.
- * @param {number|null|undefined} rating The numeric rating (e.g., 3.5, 4).
- * @returns {string} Star emojis (e.g., "⭐⭐⭐½") or "Not Rated".
- */
 function convertRatingToStars(rating) {
     if (rating === null || isNaN(rating)) return 'Not Rated';
 
@@ -67,29 +50,20 @@ function convertRatingToStars(rating) {
     const halfStar = rating % 1 !== 0;
 
     for (let i = 0; i < fullStars; i++) {
-        stars += '⭐'; // Full star emoji
+        stars += '⭐'; 
     }
 
     if (halfStar) {
-        stars += '½'; // Half star emoji
+        stars += '½'; 
     }
     
     return stars;
 }
 
 
-// --- EMBED CREATION FUNCTIONS ---
-
-/**
- * Creates an embed for the latest film watched by a user.
- * @param {Object} latestFilm Latest film details from Letterboxd.
- * @param {Object|null} tmdbDetails TMDB details for the film.
- * @param {string} letterboxdUsername The Letterboxd username.
- * @returns {Promise<EmbedBuilder>} The configured EmbedBuilder.
- */
 async function createDiaryEmbed(latestFilm, tmdbDetails, letterboxdUsername) {
     const embed = new EmbedBuilder()
-        .setColor(0xFFFF00) // Yellow color
+        .setColor(0xFFFF00) 
         .setURL(latestFilm.url);
 
     const embedTitle = `Last Film by ${letterboxdUsername} 🎬`;
@@ -102,7 +76,7 @@ async function createDiaryEmbed(latestFilm, tmdbDetails, letterboxdUsername) {
     embed.setDescription(description);
 
     if (tmdbDetails) {
-        embed.setImage(getTmdbPosterUrl(tmdbDetails.poster_path, 'w500')); // Set main image as TMDB poster
+        embed.setImage(getTmdbPosterUrl(tmdbDetails.poster_path, 'w500')); 
 
         const roundedRating = tmdbDetails.vote_average ? parseFloat(tmdbDetails.vote_average).toFixed(1) : 'N/A';
         const votesFormatted = tmdbDetails.vote_count ? `${tmdbDetails.vote_count.toLocaleString('en-US')} Votes` : 'N/A';
@@ -126,21 +100,14 @@ async function createDiaryEmbed(latestFilm, tmdbDetails, letterboxdUsername) {
         );
     }
 
-    embed.setFooter(null); // Remove default footer if any
+    embed.setFooter(null); 
 
     return embed;
 }
 
-/**
- * Creates an embed for the latest review by a user.
- * @param {Object} reviewDetails Latest review details from Letterboxd.
- * @param {Object|null} tmdbDetails TMDB details for the film.
- * @param {string} letterboxdUsername The Letterboxd username.
- * @returns {Promise<EmbedBuilder>} The configured EmbedBuilder.
- */
 async function createReviewEmbed(reviewDetails, tmdbDetails, letterboxdUsername) {
     const embed = new EmbedBuilder()
-        .setColor(0xAA00AA) // Purple color
+        .setColor(0xAA00AA) 
         .setURL(reviewDetails.reviewUrl);
 
     const embedTitle = `Latest Review by ${letterboxdUsername} 📝`;
@@ -157,7 +124,6 @@ async function createReviewEmbed(reviewDetails, tmdbDetails, letterboxdUsername)
     description += `**Written:** ${formatDateEn(reviewDetails.reviewDate)}\n`;
     description += `**Rating:** ${convertRatingToStars(reviewDetails.rating)}\n\n`;
 
-    // Truncate long reviews and provide a link to the full review
     if (reviewDetails.reviewText.length > 700) {
         description += `${reviewDetails.reviewText.substring(0, 700)}...\n`;
         description += `[Read full review here](${reviewDetails.reviewUrl})\n`;
@@ -168,7 +134,7 @@ async function createReviewEmbed(reviewDetails, tmdbDetails, letterboxdUsername)
     embed.setDescription(description);
 
     if (tmdbDetails) {
-        embed.setThumbnail(getTmdbPosterUrl(tmdbDetails.poster_path, 'w92')); // Set poster as thumbnail
+        embed.setThumbnail(getTmdbPosterUrl(tmdbDetails.poster_path, 'w92')); 
     }
 
     embed.setFooter(null);
@@ -176,16 +142,9 @@ async function createReviewEmbed(reviewDetails, tmdbDetails, letterboxdUsername)
     return embed;
 }
 
-/**
- * Creates an embed for daily watched films.
- * @param {Array<Object>} dailyFilms Array of film objects watched on a specific day.
- * @param {string} letterboxdUsername The Letterboxd username.
- * @param {string} displayDate Formatted date for display.
- * @returns {Promise<EmbedBuilder>} The configured EmbedBuilder.
- */
 async function createDailyDiaryEmbed(dailyFilms, letterboxdUsername, displayDate) {
     const embed = new EmbedBuilder()
-        .setColor(0x00FF00) // Green color
+        .setColor(0x00FF00) 
         .setTitle(`Diary of ${letterboxdUsername} on ${displayDate} 🗓️`);
 
     let description = '';
@@ -201,10 +160,10 @@ async function createDailyDiaryEmbed(dailyFilms, letterboxdUsername, displayDate
     } else {
         description = `No films watched on this date.`;
     }
-    embed.setDescription(description.substring(0, 4096)); // Ensure description does not exceed Discord limit
+    embed.setDescription(description.substring(0, 4096)); 
 
     if (dailyFilms[0]?.tmdbDetails?.poster_path) {
-        embed.setThumbnail(getTmdbPosterUrl(dailyFilms[0].tmdbDetails.poster_path, 'w92')); // Use first film's poster as thumbnail
+        embed.setThumbnail(getTmdbPosterUrl(dailyFilms[0].tmdbDetails.poster_path, 'w92')); 
     }
 
     embed.setFooter(null);
@@ -212,33 +171,24 @@ async function createDailyDiaryEmbed(dailyFilms, letterboxdUsername, displayDate
     return embed;
 }
 
-/**
- * Creates an embed and a grid image for a user's favorite films.
- * @param {Array<Object>} favoriteFilms Array of favorite film objects.
- * @param {string} letterboxdUsername The Letterboxd username.
- * @returns {Promise<Object>} An object containing the EmbedBuilder and the AttachmentBuilder (the image).
- */
 async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
     const embed = new EmbedBuilder()
-        .setColor(0xFF00FF) // Pink/Magenta color
+        .setColor(0xFF00FF) 
         .setTitle(`Favorite Films of ${letterboxdUsername} ❤️`);
 
     let attachment = null;
     let imageFailureMessage = '';
 
-    // Create a list of films for the embed description
     const filmListDescription = favoriteFilms.map((film, index) =>
         `${index + 1}. **[${film.title} (${film.year})](https://letterboxd.com/film/${film.slug}/)**`
     ).join('\n');
     embed.setDescription(filmListDescription);
 
-    // Get poster URLs for the favorite films
     const posterUrls = favoriteFilms.map(film =>
         film.tmdbDetails?.poster_path ? getTmdbPosterUrl(film.tmdbDetails.poster_path, 'w342') : null
-    ).filter(url => url !== null); // Filter out null URLs
+    ).filter(url => url !== null); 
 
     if (posterUrls.length > 0) {
-        // Download all posters in parallel
         const posterBuffers = await Promise.all(
             posterUrls.map(async url => {
                 try {
@@ -246,22 +196,19 @@ async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
                     return response.data;
                 } catch (error) {
                     console.error(`Error downloading poster from ${url}:`, error.message);
-                    // Return a placeholder grey image if download fails
                     return sharp({ create: { width: 342, height: 513, channels: 4, background: { r: 100, g: 100, b: 100, alpha: 1 } } }).png().toBuffer();
                 }
             })
         );
 
-        // Define dimensions for the poster grid
         const posterWidth = 342;
         const posterHeight = 513;
-        const gap = 10; // Gap between posters
-        const numCols = Math.min(posterUrls.length, 2); // Max 2 columns
+        const gap = 10; 
+        const numCols = Math.min(posterUrls.length, 2); 
         const numRows = Math.ceil(posterUrls.length / 2);
         const outputWidth = numCols * posterWidth + (numCols - 1) * gap;
         const outputHeight = numRows * posterHeight + (numRows - 1) * gap;
 
-        // Prepare composite operations for Sharp
         const compositeImages = posterBuffers.map((buffer, i) => ({
             input: buffer,
             left: (i % 2) * (posterWidth + gap),
@@ -269,7 +216,6 @@ async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
         }));
 
         try {
-            // Compose the grid image using Sharp
             const combinedImageBuffer = await sharp({ create: { width: outputWidth, height: outputHeight, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
                 .composite(compositeImages).png().toBuffer();
             attachment = new AttachmentBuilder(combinedImageBuffer, { name: 'favorites_grid.png' });
@@ -282,7 +228,6 @@ async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
         imageFailureMessage = 'Could not retrieve favorite film posters.';
     }
 
-    // Add image generation failure message to description if applicable
     if (imageFailureMessage) {
         embed.setDescription((embed.description || '') + `\n\n${imageFailureMessage}`);
     }
@@ -290,17 +235,9 @@ async function createFavoritesEmbed(favoriteFilms, letterboxdUsername) {
     return { embed, attachment };
 }
 
-/**
- * Creates an embed for displaying details of a single movie.
- * @param {Object} movie TMDB movie object.
- * @param {string|null} posterUrl URL for the movie poster.
- * @param {Array<string>} genreNames Array of genre names.
- * @param {string} filmUrl URL for the movie (Letterboxd or TMDB).
- * @returns {EmbedBuilder} The configured EmbedBuilder.
- */
 function createMovieEmbed(movie, posterUrl, genreNames, filmUrl) {
     const embed = new EmbedBuilder()
-        .setColor(0x0099ff) // A nice blue color
+        .setColor(0x0099ff) 
         .setTitle(movie.title || 'Unknown Title')
         .setURL(filmUrl);
 
@@ -310,7 +247,6 @@ function createMovieEmbed(movie, posterUrl, genreNames, filmUrl) {
     }
 
     if (movie.overview) {
-        // Truncate overview if too long
         embed.setDescription(movie.overview.substring(0, 500) + (movie.overview.length > 500 ? '...' : ''));
     } else {
         embed.setDescription('No synopsis available.');
@@ -325,7 +261,6 @@ function createMovieEmbed(movie, posterUrl, genreNames, filmUrl) {
         embed.addFields({ name: 'TMDB Rating', value: `${rating}/10`, inline: true });
     }
     
-    // Genres: Displaying names
     if (genreNames && genreNames.length > 0) {
         embed.addFields({ name: 'Genres', value: genreNames.join(', '), inline: true });
     }
@@ -334,17 +269,7 @@ function createMovieEmbed(movie, posterUrl, genreNames, filmUrl) {
 }
 
 
-/**
- * Creates an embed and a grid image for films (generic for Likes, Watched Films).
- * Supports hyperlinks and incomplete grids with transparent backgrounds.
- * @param {Array<Object>} films Array of film objects with slug, title, year, posterUrl, and optionally tmdbUrl.
- * @param {string} gridTitle The title of the grid (e.g., "Liked Films of X", "Watched Films Today by Y").
- * @param {number} cols Number of columns for the grid.
- * @param {number} rows Number of rows for the grid.
- * @returns {Promise<Object>} An object containing the EmbedBuilder and the AttachmentBuilder (the image).
- */
 async function createGridImage(films, gridTitle, cols, rows) {
-    // Generate description with hyperlinks for each film
     const filmListDescription = films
         .map((film, index) => {
             const filmLink = film.tmdbUrl || (film.slug ? `https://letterboxd.com/film/${film.slug}/` : '#');
@@ -352,41 +277,36 @@ async function createGridImage(films, gridTitle, cols, rows) {
         })
         .join('\n');
     
-    // Debug: Check the generated description string
     console.log("[createGridImage Debug] Generated filmListDescription (inside function):", filmListDescription);
 
-    // Create the EmbedBuilder with the generated description
     const embed = new EmbedBuilder()
-        .setColor(0x6f52e3) // A purple color
+        .setColor(0x6f52e3) 
         .setTitle(`Grid of ${gridTitle}`)
         .setDescription(filmListDescription || 'No films found to display in the grid.'); 
     
-    // Debug: Check the description immediately after embed creation
     console.log("[createGridImage Debug] Embed description after construction:", embed.description);
 
 
     let attachment = null;
-    const requiredFilms = cols * rows; // Total number of spots in the grid
+    const requiredFilms = cols * rows; 
 
     const posterPromises = [];
     for (let i = 0; i < requiredFilms; i++) {
         const film = films[i]; 
         if (film && film.posterUrl) {
-            // Push a promise to download the poster
             posterPromises.push(axios.get(film.posterUrl, { responseType: 'arraybuffer' })
                 .then(response => response.data)
                 .catch(error => {
                     console.error(`Error downloading poster for ${film.title} (${film.posterUrl}):`, error.message);
-                    return null; // Return null if download fails
+                    return null; 
                 })
             );
         } else {
-            posterPromises.push(Promise.resolve(null)); // Push a resolved promise for empty slots
+            posterPromises.push(Promise.resolve(null)); 
         }
     }
-    const posterBuffers = await Promise.all(posterPromises); // Wait for all posters to download
+    const posterBuffers = await Promise.all(posterPromises); 
 
-    // Define poster and grid dimensions
     const posterWidth = 150;
     const posterHeight = 225;
     const gap = 10;
@@ -399,7 +319,6 @@ async function createGridImage(films, gridTitle, cols, rows) {
     for (let i = 0; i < requiredFilms; i++) {
         const buffer = posterBuffers[i];
         if (buffer) {
-            // Resize and add poster to composite operations
             compositeImages.push({
                 input: await sharp(buffer).resize(posterWidth, posterHeight).toBuffer(),
                 left: Math.floor(i % numCols) * (posterWidth + gap),
@@ -409,13 +328,12 @@ async function createGridImage(films, gridTitle, cols, rows) {
     }
     
     try {
-        // Create the composite image with a transparent background
         const combinedImageBuffer = await sharp({
             create: {
                 width: outputWidth,
                 height: outputHeight,
                 channels: 4,
-                background: { r: 0, g: 0, b: 0, alpha: 0 } // Transparent background
+                background: { r: 0, g: 0, b: 0, alpha: 0 } 
             }
         })
         .composite(compositeImages)
@@ -427,21 +345,14 @@ async function createGridImage(films, gridTitle, cols, rows) {
         embed.setFooter({ text: 'An error occurred while generating the grid image.' });
     }
 
-    // Debug: Check the embed description just before returning
     console.log("[createGridImage Debug] Embed description RIGHT BEFORE RETURN:", embed.description);
 
     return { embed, attachment };
 }
 
-/**
- * Creates an embed for a Letterboxd user's profile statistics.
- * @param {Object} profileStats User's profile statistics.
- * @param {string} username The Letterboxd username.
- * @returns {Object} An object containing the EmbedBuilder.
- */
 async function createProfileEmbed(profileStats, username) {
     const embed = new EmbedBuilder()
-        .setColor(0xFFFFFF) // White color
+        .setColor(0xFFFFFF) 
         .setTitle(`Letterboxd Profile of ${username}`)
         .setURL(profileStats.profileUrl) 
         .setThumbnail(profileStats.userAvatarUrl || null); 
@@ -450,7 +361,6 @@ async function createProfileEmbed(profileStats, username) {
 
     const fields = [];
 
-    // Add various profile statistics as fields
     if (profileStats.totalFilmsWatched !== 'N/A') {
         fields.push({
             name: '🎬 Films Watched:',
@@ -465,7 +375,6 @@ async function createProfileEmbed(profileStats, username) {
             inline: true
         });
     }
-    // Add an empty field for spacing if needed
     if (profileStats.totalFilmsWatched !== 'N/A' || profileStats.filmsThisYear !== 'N/A') {
         fields.push({ name: '\u200b', value: '\u200b', inline: false }); 
     }
@@ -518,27 +427,11 @@ async function createProfileEmbed(profileStats, username) {
     return { embed };
 }
 
-/**
- * Creates an embed that simulates a Letterboxd Cinephile ID Card.
- * @param {Object} cardData Object containing data for the card.
- * @param {string} cardData.username Letterboxd username.
- * @param {string} cardData.avatarUrl URL of the user's avatar.
- * @param {string} cardData.totalFilms Total films watched.
- * @param {string} cardData.filmsThisYear Films watched this year.
- * @param {string} cardData.followers Number of followers.
- * @param {string} cardData.following Number of following.
- * @param {string} cardData.watchlistCount Number of watchlist films.
- * @param {string} cardData.mostCommonRating The most common rating given by the user.
- * @param {string} cardData.randomQuote A random movie quote.
- * @param {string} cardData.profileUrl URL of the user's Letterboxd profile.
- * @returns {Object} An object containing the EmbedBuilder and the AttachmentBuilder.
- */
 async function createLetterIDEmbed(cardData) {
     try {
         const templateImage = await sharp(idCardTemplatePath);
         const templateMetadata = await templateImage.metadata();
 
-        // Download and resize avatar
         const avatarBuffer = await axios.get(cardData.avatarUrl, { responseType: 'arraybuffer' });
         const avatarWidth = 310;
         const avatarHeight = 352;
@@ -546,61 +439,43 @@ async function createLetterIDEmbed(cardData) {
         const avatarY = 23;
         const avatarImage = await sharp(avatarBuffer.data).resize(avatarWidth, avatarHeight, { fit: 'cover' }).toBuffer();
 
-        // Generate QR Code with transparent background
         const qrCodeOptions = {
-            errorCorrectionLevel: 'H', // High error correction
+            errorCorrectionLevel: 'H', 
             width: 90,
             color: {
-                dark: '#000000FF', // Opaque black for QR code modules
-                light: '#00000000' // Fully transparent background
+                dark: '#000000FF', 
+                light: '#00000000' 
             }
         };
         const qrCodeBuffer = await QRCode.toBuffer(cardData.profileUrl, qrCodeOptions);
 
-        // Resize the generated transparent QR Code
         const qrCodeImage = await sharp(qrCodeBuffer)
             .resize(90, 90)
             .toBuffer();
 
-        // Array to hold all image composite operations
         let compositeOperations = [];
 
-        // Add avatar and QR code to composite operations
         compositeOperations.push({ input: avatarImage, top: avatarY, left: avatarX }); 
         const qrCodeX = 880; 
         const qrCodeY = 510; 
         compositeOperations.push({ input: qrCodeImage, top: qrCodeY, left: qrCodeX });
 
-        // --- TEXT RENDERING: Render text as SVG and then composite it onto the image ---
         const overlaysForTextComposite = [];
 
-        /**
-         * Adds an SVG text overlay to the image composite operations.
-         * @param {string} text The text content.
-         * @param {number} x X-coordinate for the text.
-         * @param {number} y Y-coordinate for the text.
-         * @param {number} size Font size in pixels.
-         * @param {string} fontPathOrName Path to a TTF font file or a generic font name.
-         * @param {Object} color RGBA color object (default: black).
-         * @param {string} weight Font weight (e.g., 'normal', 'bold').
-         */
         const addTextSvgOverlay = (text, x, y, size, fontPathOrName, color = { r: 0, g: 0, b: 0, alpha: 255 }, weight = 'normal') => {
-            if (!text || text === 'N/A') return; // Skip if text is empty or N/A
+            if (!text || text === 'N/A') return; 
 
             const cssColor = `rgba(${color.r},${color.g},${color.b},${color.alpha / 255})`;
             let fontFamily = 'Arial';
             let fontSrc = '';
 
-            // If a TTF font path is provided, define a custom font-face
             if (fontPathOrName && fontPathOrName.endsWith('.ttf')) {
-                // Use a generic name for font-family, actual path is in src
-                fontFamily = `'Bastliga One'`; // Using a generic name for the font-face definition
+                fontFamily = `'Bastliga One'`; 
                 fontSrc = `@font-face { font-family: ${fontFamily}; src: url('${fontPathOrName}') format('truetype'); }`;
             } else if (fontPathOrName) {
-                fontFamily = `'${fontPathOrName}'`; // Use the provided font name directly
+                fontFamily = `'${fontPathOrName}'`; 
             }
 
-            // Create SVG string for the text
             const svgText = `
                 <svg width="${templateMetadata.width}" height="${templateMetadata.height}">
                     <style>
@@ -619,23 +494,16 @@ async function createLetterIDEmbed(cardData) {
         };
 
 
-        // Add text fields based on McLovin ID template coordinates and styling
-        // Username (similar to "McLOVIN" on McLovin ID)
         addTextSvgOverlay(cardData.username.toUpperCase(), 25, 508, 32, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
 
-        // Signature (similar to "MCLOVIN" signature on McLovin ID)
-        // The custom font is applied here.
         addTextSvgOverlay(cardData.username, 500, 500, 80, signatureFontPath);
 
-        // Statistics data - Adjusted to align with the right side of the photo on the McLovin ID
         const statXStart = 370;
         const statLineHeight = 35;
         const statFontSize = 22;
 
-        // Adjust this value to move all statistics down
         const newStatYStart = 140; 
 
-        // Statistics fields
         addTextSvgOverlay(`FILMS WATCHED: ${cardData.totalFilms || 'N/A'}`, statXStart, newStatYStart, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
         addTextSvgOverlay(`FILMS THIS YEAR: ${cardData.filmsThisYear || 'N/A'}`, statXStart, newStatYStart + statLineHeight, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
 
@@ -645,12 +513,9 @@ async function createLetterIDEmbed(cardData) {
         addTextSvgOverlay(`WATCHLIST: ${cardData.watchlistCount || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 4, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
         addTextSvgOverlay(`MOST COMMON RATING: ${cardData.mostCommonRating || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 5, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
 
-        // Random movie quote
         addTextSvgOverlay(`"${cardData.randomQuote}"`, statXStart, newStatYStart + statLineHeight * 6.5 + 20, 18, 'Arial', { r: 70, g: 70, b: 70, alpha: 255 }); 
 
 
-        // --- FINAL IMAGE COMPOSITION ---
-        // Composite all layers (template, avatar, QR code, and text SVGs)
         const imageBuffer = await sharp(idCardTemplatePath)
             .composite([
                 ...compositeOperations,
@@ -659,23 +524,20 @@ async function createLetterIDEmbed(cardData) {
             .png()
             .toBuffer();
 
-        // Create an AttachmentBuilder for the generated image
         const attachment = new AttachmentBuilder(imageBuffer, { name: `letterid_${cardData.username}.png` });
 
-        // Create the EmbedBuilder
         const embed = new EmbedBuilder()
-            .setColor(0x000000) // Black color
+            .setColor(0x000000) 
             .setTitle(`Cinephile ID Card for ${cardData.username}`)
-            .setImage(`attachment://letterid_${cardData.username}.png`) // Link the image attachment
+            .setImage(`attachment://letterid_${cardData.username}.png`) 
             .setURL(cardData.profileUrl);
 
         return { embed, attachment };
 
     } catch (error) {
         console.error('Error creating Letterboxd ID card:', error);
-        // Return an error embed if something goes wrong
         const embed = new EmbedBuilder()
-            .setColor(0xFF0000) // Red color for error
+            .setColor(0xFF0000) 
             .setTitle('Error generating Cinephile ID Card')
             .setDescription('An error occurred while creating your ID card. Please try again later.')
             .setFooter({ text: 'LetterBotd' });
@@ -683,23 +545,16 @@ async function createLetterIDEmbed(cardData) {
     }
 }
 
-/**
- * Creates an embed for the movie guessing quiz.
- * @param {Object} movie TMDB movie object.
- * @param {'synopsis'|'poster'|'both'} contentType How to present the quiz (synopsis, poster, or both).
- * @param {Function} getTmdbPosterUrlFn The function to get TMDB poster URL.
- * @returns {Promise<EmbedBuilder>} The configured EmbedBuilder.
- */
 async function createQuizEmbed(movie, contentType, getTmdbPosterUrlFn) {
     const embed = new EmbedBuilder()
-        .setColor(0x7289DA) // Discord's blurple color
+        .setColor(0x7289DA) 
         .setTitle('🎬 Guess the Movie! 🍿');
 
-    let descriptionContent = ''; // Use a new variable for description content
-    let hasImage = false; // Flag to check if there's an image
+    let descriptionContent = ''; 
+    let hasImage = false; 
 
     if (contentType === 'synopsis' || contentType === 'both') {
-        descriptionContent = movie.overview ? movie.overview.substring(0, 1000) + (movie.overview.length > 1000 ? '...' : '') : ''; // Don't fill with "No synopsis available." yet
+        descriptionContent = movie.overview ? movie.overview.substring(0, 1000) + (movie.overview.length > 1000 ? '...' : '') : ''; 
     }
 
     if (contentType === 'poster' || contentType === 'both') {
@@ -710,7 +565,6 @@ async function createQuizEmbed(movie, contentType, getTmdbPosterUrlFn) {
         }
     }
 
-    // Logic to ensure the description is never empty and includes the time hint
     let finalDescription = '';
     if (descriptionContent.trim().length > 0) {
         finalDescription = descriptionContent;
@@ -718,34 +572,26 @@ async function createQuizEmbed(movie, contentType, getTmdbPosterUrlFn) {
         finalDescription = 'No synopsis available for this movie.';
     } else if (contentType === 'poster' && !hasImage) {
         finalDescription = 'No poster available for this movie.';
-    } else { // Fallback for any scenario that is still empty
+    } else { 
         finalDescription = 'No clues available for this movie.';
     }
 
     finalDescription += '\n\nYou have 30 seconds! Type your guess in the chat.';
     
     embed.setDescription(finalDescription);
-    embed.setFooter(null); // Ensures footer is not duplicated, as the hint is in the description
+    embed.setFooter(null); 
 
     return embed;
 }
 
-/**
- * Creates an embed to reveal the quiz answer and announce the winner.
- * @param {Object} movie The correct TMDB movie object.
- * @param {Object|null} correctGuesser Discord User object of the winner, or null if no one guessed.
- * @param {string} finalFilmUrl The Letterboxd or TMDB URL for the film.
- * @param {Function} getTmdbPosterUrlFn The function to get TMDB poster URL.
- * @returns {Promise<EmbedBuilder>} The configured EmbedBuilder.
- */
 async function revealQuizAnswer(movie, correctGuesser, finalFilmUrl, getTmdbPosterUrlFn) {
     const embed = new EmbedBuilder()
-        .setColor(correctGuesser ? 0x00FF00 : 0xFF0000) // Green for win, Red for no win
+        .setColor(correctGuesser ? 0x00FF00 : 0xFF0000) 
         .setTitle(`The movie was: ${movie.title} (${new Date(movie.release_date).getFullYear()}) 🎉`)
         .setURL(finalFilmUrl);
 
     if (movie.poster_path) {
-        embed.setThumbnail(getTmdbPosterUrlFn(movie.poster_path, 'w92')); // Smaller thumbnail
+        embed.setThumbnail(getTmdbPosterUrlFn(movie.poster_path, 'w92')); 
     }
 
     let description = `**Synopsis:** ${movie.overview ? movie.overview.substring(0, 700) + (movie.overview.length > 700 ? '...' : '') : 'N/A'}\n\n`;
@@ -757,24 +603,11 @@ async function revealQuizAnswer(movie, correctGuesser, finalFilmUrl, getTmdbPost
         description += '**Time\'s up! Nobody guessed correctly this time.** 😔';
     }
 
-    // The reveal description should also ensure it's not empty
     embed.setDescription(description.length > 0 ? description : ' ');
 
     return embed;
 }
 
-/**
- * Creates an embed to display film taste compatibility between two users.
- * @param {string} user1DisplayName Discord display name of user 1.
- * @param {string} user2DisplayName Discord display name of user 2.
- * @param {string} lbUsername1 Letterboxd username of user 1.
- * @param {string} lbUsername2 Letterboxd username of user 2.
- * @param {number} compatibilityPercentage The calculated compatibility percentage.
- * @param {number} commonFilmsCount Number of films watched by both users.
- * @param {Array<Object>} mostAgreedFilms List of 3 films where tastes most agreed.
- * @param {Array<Object>} mostDisagreedFilms List of 3 films where tastes most disagreed.
- * @returns {EmbedBuilder} The configured EmbedBuilder.
- */
 function createTasteEmbed(
     user1DisplayName,
     user2DisplayName,
@@ -786,24 +619,22 @@ function createTasteEmbed(
     mostDisagreedFilms
 ) {
     const embed = new EmbedBuilder()
-        .setColor(0xFFA500) // Orange color for compatibility
+        .setColor(0xFFA500) 
         .setTitle(`Taste Compatibility: ${user1DisplayName} vs. ${user2DisplayName} 🔗`);
 
     let description = `Comparing **[${lbUsername1}](https://letterboxd.com/${lbUsername1}/)** and **[${lbUsername2}](https://letterboxd.com/${lbUsername2}/)**:\n`; 
     
-    // Logic to add emoji based on percentage
     let compatibilityEmoji = '';
     if (compatibilityPercentage > 90) {
         compatibilityEmoji = '❤️';
-    } else if (compatibilityPercentage >= 70) { // Between 70 and 90%
+    } else if (compatibilityPercentage >= 70) { 
         compatibilityEmoji = '✌️';
-    } else if (compatibilityPercentage >= 50) { // Between 50 and 70%
+    } else if (compatibilityPercentage >= 50) { 
         compatibilityEmoji = '💀';
-    } else { // Less than 50%
+    } else { 
         compatibilityEmoji = '💩';
     }
 
-    // The percentage line now includes the emoji
     description += `## **${compatibilityPercentage}% Compatibility ${compatibilityEmoji}**\n`;
     description += `Based on **${commonFilmsCount}** films watched by both users.\n\n`;
 
@@ -834,24 +665,17 @@ function createTasteEmbed(
     return embed;
 }
 
-/**
- * Creates an embed to reveal the result of the Impostor game.
- * @param {Object} impostorMovie The TMDB movie object that was the impostor.
- * @param {Object|null} guesser Discord User object of the player who guessed, or null if timed out/no correct guess.
- * @param {boolean} isCorrectGuess True if the guesser guessed correctly, false if they guessed wrong or null.
- * @returns {EmbedBuilder} The configured EmbedBuilder for the Impostor game result.
- */
 function revealImpostorAnswer(impostorMovie, guesser = null, isCorrectGuess = false) {
     let title = '';
-    let color = 0xFF0000; // Default red for "nobody guessed" or "wrong guess"
+    let color = 0xFF0000; 
 
     if (isCorrectGuess) {
         title = `🎉 Correct! ${guesser.displayName || guesser.username} Guessed the Impostor! 🎉`;
-        color = 0x00FF00; // Green for correct guess
-    } else if (guesser) { // Guessed, but wrong
+        color = 0x00FF00; 
+    } else if (guesser) { 
         title = `❌ Incorrect Guess, ${guesser.displayName || guesser.username}! ❌`;
-        color = 0xFFA500; // Orange for wrong guess
-    } else { // Timed out
+        color = 0xFFA500; 
+    } else { 
         title = `⏰ Time's Up! Nobody Guessed the Impostor! ⏰`;
         color = 0xFF0000;
     }
@@ -859,7 +683,7 @@ function revealImpostorAnswer(impostorMovie, guesser = null, isCorrectGuess = fa
     const embed = new EmbedBuilder()
         .setColor(color)
         .setTitle(title)
-        .setURL(`https://www.themoviedb.org/movie/${impostorMovie.id}`); // Link to TMDB of the impostor
+        .setURL(`https://www.themoviedb.org/movie/${impostorMovie.id}`); 
 
     if (impostorMovie.poster_path) {
         embed.setThumbnail(getTmdbPosterUrl(impostorMovie.poster_path, 'w92'));
@@ -873,8 +697,6 @@ function revealImpostorAnswer(impostorMovie, guesser = null, isCorrectGuess = fa
     return embed;
 }
 
-// --- FINAL EXPORT BLOCK OF ALL FUNCTIONS ---
-// Export all functions for use in other modules
 export {
     createDiaryEmbed,
     createReviewEmbed,

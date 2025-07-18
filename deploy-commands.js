@@ -38,13 +38,11 @@ for (const file of commandFiles) {
         const module = await import(commandUrl);
         let command;
 
-        // Verifica se é um export default (como o similar.js)
         if (module.default && typeof module.default === 'object' && ('data' in module.default || 'execute' in module.default)) {
             command = module.default;
         } 
-        // Caso contrário, tenta como CommonJS (module.exports) ou exports nomeados
         else {
-            command = module; // Para módulos que exportam 'data' e 'execute' diretamente (CommonJS ou ES nomeado)
+            command = module; 
         }
 
         if ('data' in command && 'execute' in command) {

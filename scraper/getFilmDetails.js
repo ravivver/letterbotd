@@ -1,16 +1,9 @@
-// scraper/getFilmDetails.js
-
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-/**
- * Scrapes details of a specific film from its Letterboxd page.
- * @param {string} filmSlug The slug of the film (e.g., "eyes-wide-shut").
- * @returns {Promise<Object|null>} An object with film details, or null if not found/error.
- */
 async function getFilmDetails(filmSlug) {
     if (!filmSlug) {
-        throw new Error('Film slug is required.'); // Translated
+        throw new Error('Film slug is required.');
     }
 
     const url = `https://letterboxd.com/film/${filmSlug}/`;
@@ -27,19 +20,16 @@ async function getFilmDetails(filmSlug) {
 
         const $ = cheerio.load(response.data);
 
-        // --- Page Error Checks ---
         const pageTitle = $('title').text();
         const mainContent = $('#content').text();
         if (pageTitle.includes('Page Not Found') || mainContent.includes('The page you were looking for doesn\'t exist')) {
-            throw new Error(`Film '${filmSlug}' not found.`); // Translated
+            throw new Error(`Film '${filmSlug}' not found.`);
         }
         if (response.status === 404) {
-             throw new Error(`The film page '${filmSlug}' returned an unexpected 404 error.`); // Translated
+             throw new Error(`The film page '${filmSlug}' returned an unexpected 404 error.`);
         }
-        // --- End of Page Error Checks ---
 
 
-        // Extracting High-Resolution Poster - **NEW STRATEGY!**
         let highResPosterUrl = null;
         const modalImgSrc = $('#poster-modal .modal-body .poster img.image').attr('src');
         const modalImgSrcset = $('#poster-modal .modal-body .poster img.image').attr('srcset');
@@ -52,7 +42,6 @@ async function getFilmDetails(filmSlug) {
             highResPosterUrl = modalImgSrc;
         }
 
-        // Fallback to URL from 'data-js-trigger="postermodal"' and try to construct
         if (!highResPosterUrl) {
             const posterModalLinkHref = $('a[data-js-trigger="postermodal"]').attr('href');
             if (posterModalLinkHref) {
@@ -60,14 +49,12 @@ async function getFilmDetails(filmSlug) {
             }
         }
 
-        // Extracting Backdrop (Background) URL
         let backdropUrl = null;
         const backdropDiv = $('#backdrop');
         if (backdropDiv.length) {
             backdropUrl = backdropDiv.attr('data-backdrop');
         }
 
-        // Extracting Film Likes Count (Exact Count) - CORRECTED!
         let filmLikesCount = null;
         const likesTooltipElement = $('.production-statistic.-likes a.tooltip'); 
         if (likesTooltipElement.length) {
@@ -80,7 +67,6 @@ async function getFilmDetails(filmSlug) {
             }
         }
 
-        // Extracting Film Watches Count (Exact Count) - CORRECTED!
         let filmWatchesCount = null;
         const watchesTooltipElement = $('.production-statistic.-watches a.tooltip');
         if (watchesTooltipElement.length) {
@@ -93,14 +79,12 @@ async function getFilmDetails(filmSlug) {
             }
         }
 
-        // Extracting Film Director
         let director = null;
         const directorElement = $('p.credits span.creatorlist a span.prettify');
         if (directorElement.length) {
             director = directorElement.text().trim();
         }
 
-        // Extracting Average Rating and Rating Count - CORRECTED!
         let averageRating = null;
         let ratingsCount = null;
         const averageRatingElement = $('span.average-rating a.display-rating');
@@ -128,13 +112,13 @@ async function getFilmDetails(filmSlug) {
 
     } catch (error) {
         if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'UND_ERR_SOCKET') {
-            throw new Error('Could not connect to Letterboxd to fetch film details. Check your internet connection.'); // Translated
+            throw new Error('Could not connect to Letterboxd to fetch film details. Check your internet connection.');
         }
-        if (error.message.includes('Film') || error.message.includes('404')) { // Translated
+        if (error.message.includes('Film') || error.message.includes('404')) {
             throw error;
         }
-        console.error(`Unexpected error scraping film details for '${filmSlug}':`, error.message); // Translated
-        throw new Error(`An unexpected error occurred while fetching details for film '${filmSlug}'. Please try again later.`); // Translated
+        console.error(`Unexpected error scraping film details for '${filmSlug}':`, error.message);
+        throw new Error(`An unexpected error occurred while fetching details for film '${filmSlug}'. Please try again later.`);
     }
 }
 

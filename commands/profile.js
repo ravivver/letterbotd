@@ -1,5 +1,3 @@
-// commands/profile.js
-
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -14,19 +12,19 @@ const usersFilePath = path.join(__dirname, '..', 'storage', 'users.json');
 
 export const data = new SlashCommandBuilder()
     .setName('profile')
-    .setDescription('Shows a user\'s Letterboxd profile statistics.') // Translated
+    .setDescription('Shows a user\'s Letterboxd profile statistics.')
     .addUserOption(option =>
-        option.setName('user') // Changed 'usuario' to 'user'
-            .setDescription('Mention another Discord user to view their profile.') // Translated
+        option.setName('user')
+            .setDescription('Mention another Discord user to view their profile.')
             .setRequired(false));
 
 export async function execute(interaction) {
-    await interaction.deferReply(); // Public deferral by default
+    await interaction.deferReply(); 
 
     let targetDiscordId = interaction.user.id;
     let targetUserTag = interaction.user.tag;
 
-    const mentionedUser = interaction.options.getUser('user'); // Changed 'usuario' to 'user'
+    const mentionedUser = interaction.options.getUser('user');
     if (mentionedUser) {
         targetDiscordId = mentionedUser.id;
         targetUserTag = mentionedUser.tag;
@@ -41,16 +39,15 @@ export async function execute(interaction) {
             if (readError.code === 'ENOENT') {
                 users = {};
             } else {
-                console.error(`Error reading users.json: ${readError.message}`); // Translated
+                console.error(`Error reading users.json: ${readError.message}`);
                 await interaction.editReply({
-                    content: 'An internal error occurred while fetching user links. Please try again later.', // Translated
+                    content: 'An internal error occurred while fetching user links. Please try again later.',
                     flags: MessageFlags.Ephemeral
                 });
                 return;
             }
         }
 
-        // Handle both string and object formats for userEntry
         let letterboxdUsername;
         const userEntry = users[targetDiscordId];
         if (typeof userEntry === 'string') {
@@ -61,39 +58,36 @@ export async function execute(interaction) {
 
         if (!letterboxdUsername) {
             await interaction.editReply({
-                content: `User ${targetUserTag} has not linked their Letterboxd account yet. Ask them to use \`/link\`!`, // Translated
+                content: `User ${targetUserTag} has not linked their Letterboxd account yet. Ask them to use \`/link\`!`,
                 flags: MessageFlags.Ephemeral
             });
             return;
         }
 
-        // Call the scraper to get profile statistics
         const profileStats = await getProfileStats(letterboxdUsername);
 
         if (!profileStats) {
             await interaction.editReply({
-                content: `Could not retrieve profile statistics for \`${letterboxdUsername}\`.`, // Translated
+                content: `Could not retrieve profile statistics for \`${letterboxdUsername}\`.`,
             });
             return;
         }
 
-        // Create the embed with statistics
         const { embed } = await createProfileEmbed(profileStats, letterboxdUsername);
 
-        // Send the embed (editing the initial deferReply)
         await interaction.editReply({
             embeds: [embed],
         });
 
     } catch (error) {
-        console.error(`Error processing /profile command for ${targetUserTag}:`, error); // Translated
-        let errorMessage = `An error occurred while accessing this user's Letterboxd profile. Details: ${error.message}`; // Translated
-        if (error.message.includes('Profile is Private')) { // Translated
-            errorMessage = `The Letterboxd profile of \`${letterboxdUsername}\` is private. Cannot access statistics.`; // Translated
-        } else if (error.message.includes('User not found')) { // Translated
-            errorMessage = `The Letterboxd user \`${letterboxdUsername}\` was not found.`; // Translated
-        } else if (error.message.includes('Could not connect to Letterboxd')) { // Translated
-            errorMessage = `Could not connect to Letterboxd. Check the bot's connection or try again later.`; // Translated
+        console.error(`Error processing /profile command for ${targetUserTag}:`, error);
+        let errorMessage = `An error occurred while accessing this user's Letterboxd profile. Details: ${error.message}`;
+        if (error.message.includes('Profile is Private')) {
+            errorMessage = `The Letterboxd profile of \`${letterboxdUsername}\` is private. Cannot access statistics.`;
+        } else if (error.message.includes('User not found')) {
+            errorMessage = `The Letterboxd user \`${letterboxdUsername}\` was not found.`;
+        } else if (error.message.includes('Could not connect to Letterboxd')) {
+            errorMessage = `Could not connect to Letterboxd. Check the bot's connection or try again later.`;
         }
         await interaction.editReply({
             content: errorMessage,

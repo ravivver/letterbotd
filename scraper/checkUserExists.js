@@ -1,4 +1,3 @@
-// scraper/checkUserExists.js
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
@@ -14,17 +13,17 @@ export async function checkUserExists(username) {
     const $ = cheerio.load(data);
 
     if ($('body').text().includes('This account is private')) {
-      return { status: 'PRIVATE', message: 'This Letterboxd profile is private and cannot be linked.' }; // Translated
+      return { status: 'PRIVATE', message: 'This Letterboxd profile is private and cannot be linked.' };
     }
 
-    return { status: 'SUCCESS', message: 'User found.' }; // Translated
+    return { status: 'SUCCESS', message: 'User found.' };
 
   } catch (error) {
     if (error.response && error.response.status === 404) {
-      return { status: 'NOT_FOUND', message: `The username \`${username}\` was not found on Letterboxd.` }; // Translated
+      return { status: 'NOT_FOUND', message: `The username \`${username}\` was not found on Letterboxd.` };
     }
     
-    console.error(`Error checking user '${username}' on Letterboxd:`, error.message); // Translated
-    return { status: 'ERROR', message: 'An external error occurred while trying to check the user.' }; // Translated
+    console.error(`Error checking user '${username}' on Letterboxd:`, error.message);
+    return { status: 'ERROR', message: 'An external error occurred while trying to check the user.' };
   }
 }

@@ -1,21 +1,13 @@
-// scraper/getProfileStats.js
-
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-/**
- * Scrapes a user's Letterboxd profile for statistics and general information.
- * @param {string} username The Letterboxd username.
- * @returns {Promise<Object>} An object containing profile statistics (films watched, etc.) and tags.
- * Returns null or throws an error if the profile is not found or is private.
- */
 async function getProfileStats(username) {
     if (!username) {
-        throw new Error('Letterboxd username is required.'); // Translated
+        throw new Error('Letterboxd username is required.');
     }
 
     const url = `https://letterboxd.com/${username}/`;
-    console.log(`[Scraper - Profile] Fetching profile statistics for ${username} at URL: ${url}`); // Translated
+    console.log(`[Scraper - Profile] Fetching profile statistics for ${username} at URL: ${url}`);
 
     try {
         const response = await axios.get(url, {
@@ -29,22 +21,20 @@ async function getProfileStats(username) {
 
         const $ = cheerio.load(response.data);
 
-        // --- Page Error Checks ---
         const pageTitle = $('title').text();
         const mainContent = $('#content').text();
 
         if (mainContent.includes('Sorry, we can’t find the page you’ve requested.')) {
-            throw new Error('Letterboxd user not found.'); // Translated
+            throw new Error('Letterboxd user not found.');
         }
 
         if (pageTitle.includes('Profile is Private') || mainContent.includes('This profile is private')) {
-            throw new Error('Letterboxd profile is private. Cannot access statistics.'); // Translated
+            throw new Error('Letterboxd profile is private. Cannot access statistics.');
         }
 
         if (response.status === 404) {
-            throw new Error('The Letterboxd page returned an unexpected 404 error.'); // Translated
+            throw new Error('The Letterboxd page returned an unexpected 404 error.');
         }
-        // --- End of Page Error Checks ---
 
         const stats = {
             totalFilmsWatched: 'N/A',
@@ -57,15 +47,13 @@ async function getProfileStats(username) {
             profileUrl: url
         };
 
-        // --- EXTRACT AVATAR ---
         const avatarImg = $('div.profile-avatar span.avatar img');
         if (avatarImg.length) {
             stats.userAvatarUrl = avatarImg.attr('src');
         } else {
-            console.log("[Scraper - Profile] Warning: Avatar not found with current selector."); // Translated
+            console.log("[Scraper - Profile] Warning: Avatar not found with current selector.");
         }
 
-        // --- EXTRACT MAIN STATISTICS (Films, This year, Following, Followers) ---
         const profileStatsDiv = $('div.profile-stats.js-profile-stats');
         if (profileStatsDiv.length) {
             const filmsWatchedElement = profileStatsDiv.find('h4.profile-statistic a[href$="/films/"] .value');
@@ -81,19 +69,17 @@ async function getProfileStats(username) {
             if (followersElement.length) stats.followers = followersElement.text().trim();
 
         } else {
-            console.log("[Scraper - Profile] Warning: Profile statistics div (profile-stats) not found."); // Translated
+            console.log("[Scraper - Profile] Warning: Profile statistics div (profile-stats) not found.");
         }
 
-        // --- EXTRACT WATCHLIST COUNT ---
         const watchlistSection = $('section.watchlist-aside');
         if (watchlistSection.length) {
             const watchlistCountElement = watchlistSection.find('a.all-link');
             if (watchlistCountElement.length) stats.watchlistCount = watchlistCountElement.text().trim();
         } else {
-            console.log("[Scraper - Profile] Warning: Watchlist section not found."); // Translated
+            console.log("[Scraper - Profile] Warning: Watchlist section not found.");
         }
 
-        // --- EXTRACT TAGS (Tag Names) ---
         const tagsSection = $('section:has(h3.section-heading a[href$="/tags/"])');
         if (tagsSection.length) {
             const tagElements = tagsSection.find('ul.tags li a');
@@ -102,25 +88,25 @@ async function getProfileStats(username) {
                     stats.tagsList.push($(el).text().trim());
                 });
             } else {
-                console.log("[Scraper - Profile] Warning: No tags found within the tags section."); // Translated
+                console.log("[Scraper - Profile] Warning: No tags found within the tags section.");
             }
         } else {
-            console.log("[Scraper - Profile] Warning: Tags section not found."); // Translated
+            console.log("[Scraper - Profile] Warning: Tags section not found.");
         }
 
-        console.log(`[Scraper - Profile] Statistics for ${username}:`, stats); // Translated
+        console.log(`[Scraper - Profile] Statistics for ${username}:`, stats);
 
         return stats;
 
     } catch (error) {
         if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'UND_ERR_SOCKET') {
-            throw new Error('Could not connect to Letterboxd. Check your internet connection.'); // Translated
+            throw new Error('Could not connect to Letterboxd. Check your internet connection.');
         }
-        if (error.message.includes('Profile is Private') || error.message.includes('User not found')) { // Translated
+        if (error.message.includes('Profile is Private') || error.message.includes('User not found')) {
             throw error;
         }
-        console.error(`Unexpected error scraping user profile ${username}:`, error.message); // Translated
-        throw new Error(`An unexpected error occurred while fetching ${username}'s profile. Please try again later. Details: ${error.message}`); // Translated
+        console.error(`Unexpected error scraping user profile ${username}:`, error.message);
+        throw new Error(`An unexpected error occurred while fetching ${username}'s profile. Please try again later. Details: ${error.message}`);
     }
 }
 

@@ -16,7 +16,6 @@ export const data = new SlashCommandBuilder()
             .setRequired(true));
 
 export async function execute(interaction) {
-    // Check if the user has administrator permissions
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
         return interaction.reply({ content: 'You need Administrator permissions to use this command.', ephemeral: true });
     }
@@ -28,14 +27,13 @@ export async function execute(interaction) {
         return interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
     }
 
-    if (!channel || channel.type !== 0) { // channel.type 0 is TextChannel
+    if (!channel || channel.type !== 0) {
         return interaction.reply({ content: 'Please select a valid text channel.', ephemeral: true });
     }
 
     let guildConfigs = {};
     try {
         const data = await fs.readFile(guildConfigsPath, 'utf8');
-        // NEW: Check if data is empty before parsing, or catch SyntaxError
         if (data.trim() === '') {
             console.log('[setchannel] Guild configurations file is empty. Initializing with empty configs.');
             guildConfigs = {};
@@ -44,8 +42,8 @@ export async function execute(interaction) {
         }
     } catch (error) {
         if (error.code === 'ENOENT') {
-            guildConfigs = {}; // File doesn't exist, initialize empty
-        } else if (error instanceof SyntaxError) { // NEW: Catch JSON parsing errors
+            guildConfigs = {};
+        } else if (error instanceof SyntaxError) {
             console.error('[setchannel] Error parsing guild configurations JSON (file might be empty or corrupted). Initializing with empty configs:', error.message);
             guildConfigs = {};
         } else {

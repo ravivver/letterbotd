@@ -1,28 +1,19 @@
-// scraper/getReview.js
-
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-/**
- * Scrapes all review pages for a Letterboxd user.
- * @param {string} username The Letterboxd username.
- * @returns {Promise<Array<Object>>} An array of objects, each with review details.
- * Returns an empty array if no reviews are found, the profile is private, or the user does not exist.
- */
 async function getRecentReviews(username) {
     if (!username) {
-        throw new Error('Letterboxd username is required.'); // Translated
+        throw new Error('Letterboxd username is required.');
     }
 
     let allReviews = [];
     let currentPage = 1;
-    let hasNextPage = true; // Assume there's a first page to start
+    let hasNextPage = true;
 
     try {
-        // --- MAIN LOOP TO FETCH ALL PAGES ---
         while (hasNextPage) {
             const url = `https://letterboxd.com/${username}/films/reviews/page/${currentPage}/`;
-            console.log(`[Scraper - Reviews] Fetching reviews from page ${currentPage} for ${username}...`); // Translated
+            console.log(`[Scraper - Reviews] Fetching reviews from page ${currentPage} for ${username}...`);
 
             const response = await axios.get(url, {
                 headers: {
@@ -35,13 +26,12 @@ async function getRecentReviews(username) {
 
             const $ = cheerio.load(response.data);
 
-            // --- Page Error Checks ---
             const pageTitle = $('title').text();
             const mainContent = $('#content').text();
 
             if (mainContent.includes('Sorry, we can’t find the page you’ve requested.')) {
                 if (currentPage === 1) {
-                    throw new Error('Letterboxd user not found.'); // Translated
+                    throw new Error('Letterboxd user not found.');
                 } else {
                     hasNextPage = false;
                     break;
@@ -49,13 +39,12 @@ async function getRecentReviews(username) {
             }
 
             if (pageTitle.includes('Profile is Private') || mainContent.includes('This profile is private')) {
-                throw new Error('Letterboxd profile is private. Cannot access reviews.'); // Translated
+                throw new Error('Letterboxd profile is private. Cannot access reviews.');
             }
 
             if (response.status === 404 && currentPage === 1) {
-                throw new Error('The Letterboxd page returned an unexpected 404 error on the first attempt.'); // Translated
+                throw new Error('The Letterboxd page returned an unexpected 404 error on the first attempt.');
             }
-            // --- End of Page Error Checks ---
 
             const reviewElements = $('.listitem.js-listitem article.production-viewing');
 
@@ -117,7 +106,6 @@ async function getRecentReviews(username) {
                 });
             });
 
-            // --- PAGINATION LOGIC BASED ON "Newer" and "Older" buttons ---
             const nextButton = $('.pagination .next'); 
             const prevButton = $('.pagination .previous'); 
 
@@ -130,9 +118,8 @@ async function getRecentReviews(username) {
                 hasNextPage = false;
             }
 
-            // *** DELAY TO AVOID OVERLOADING LETTERBOXD SERVER ***
             if (hasNextPage) { 
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
 
@@ -140,13 +127,13 @@ async function getRecentReviews(username) {
 
     } catch (error) {
         if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'UND_ERR_SOCKET') {
-            throw new Error('Could not connect to Letterboxd. Check your internet connection.'); // Translated
+            throw new Error('Could not connect to Letterboxd. Check your internet connection.');
         }
-        if (error.message.includes('Profile is Private') || error.message.includes('User not found')) { // Translated
+        if (error.message.includes('Profile is Private') || error.message.includes('User not found')) {
             throw error;
         }
-        console.error(`Unexpected error scraping user reviews for ${username}:`, error.message); // Translated
-        throw new Error(`An unexpected error occurred while fetching ${username}'s reviews. Please try again later. Details: ${error.message}`); // Translated
+        console.error(`Unexpected error scraping user reviews for ${username}:`, error.message);
+        throw new Error(`An unexpected error occurred while fetching ${username}'s reviews. Please try again later. Details: ${error.message}`);
     }
 }
 

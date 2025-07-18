@@ -1,4 +1,3 @@
-// commands/link.js
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises'; 
 import path from 'node:path';
@@ -25,7 +24,7 @@ export async function execute(interaction) {
 
     const letterboxdUsername = interaction.options.getString('username').trim();
     const discordId = interaction.user.id;
-    const guildId = interaction.guildId; // Get the guild ID
+    const guildId = interaction.guildId;
 
     if (!guildId) {
         await interaction.editReply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
@@ -49,7 +48,6 @@ export async function execute(interaction) {
         }
     }
 
-    // Check for Letterboxd username uniqueness across all guilds
     for (const id in users) {
         let linkedUsername;
         if (typeof users[id] === 'string') {
@@ -100,7 +98,7 @@ export async function execute(interaction) {
                     ...entry,
                     discord_id: discordId,
                     letterboxd_username: letterboxdUsername,
-                    guild_id: guildId // NEW: Pass guild_id here
+                    guild_id: guildId
                 })));
                 
                 users[discordId].last_sync_date = new Date().toISOString();

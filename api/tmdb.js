@@ -1,39 +1,27 @@
-// api/tmdb.js
-
 import axios from 'axios';
 import dotenv from 'dotenv'; 
 
-dotenv.config(); // Load environment variables
+dotenv.config();
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY; 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/'; 
+const TMDB_IMAGE_BASE_URL = 'https://image.themoviedb.org/t/p/'; 
 
-/**
- * Searches for a movie on TMDB.
- * @param {string} query The movie title to search for.
- * @param {number|null} year The release year of the movie (optional).
- * @returns {Promise<Object|null>} An object with movie details or null if not found/error.
- * @throws {Error} If TMDB_API_KEY is not configured.
- */
 async function searchMovieTMDB(query, year = null) {
     if (!TMDB_API_KEY) {
         throw new Error('TMDB_API_KEY not configured in .env'); 
     }
 
     try {
-        // Search for the movie by title and optional year
         const searchResponse = await axios.get(`${TMDB_BASE_URL}/search/movie`, {
             params: { api_key: TMDB_API_KEY, query, year, language: 'en-US' } 
         });
         
-        // If no results or empty results, return null
         if (!searchResponse.data.results || searchResponse.data.results.length === 0) {
             return null;
         }
-        const movieId = searchResponse.data.results[0].id; // Get the ID of the first result
+        const movieId = searchResponse.data.results[0].id; 
 
-        // Fetch movie details and credits in parallel for efficiency
         const [enDetailsResponse, creditsResponse] = await Promise.all([
             axios.get(`${TMDB_BASE_URL}/movie/${movieId}`, {
                 params: { api_key: TMDB_API_KEY, language: 'en-US' } 
@@ -46,10 +34,8 @@ async function searchMovieTMDB(query, year = null) {
         const movie = enDetailsResponse.data;
         const credits = creditsResponse.data;
         
-        // Extract directors from the crew list
         const directors = credits.crew.filter(member => member.job === 'Director').map(member => member.name);
 
-        // Return a structured movie object
         return {
             id: movie.id,
             title: movie.title,
@@ -58,7 +44,7 @@ async function searchMovieTMDB(query, year = null) {
             vote_average: movie.vote_average, 
             genres: movie.genres ? movie.genres.map(g => g.name) : [],
             directors: directors || [],
-            release_date: movie.release_date // ADDED: Includes release date
+            release_date: movie.release_date 
         };
     } catch (error) {
         console.error(`Error searching movie on TMDB for "${query}" (${year}):`, error.message); 
@@ -66,12 +52,6 @@ async function searchMovieTMDB(query, year = null) {
     }
 }
 
-/**
- * Constructs a TMDB poster URL.
- * @param {string} posterPath The poster path from TMDB.
- * @param {string} size The desired poster size (e.g., 'w500', 'original').
- * @returns {string|null} The full poster URL or null if posterPath is not provided.
- */
 function getTmdbPosterUrl(posterPath, size = 'w500') {
     if (posterPath) {
         return `${TMDB_IMAGE_BASE_URL}${size}${posterPath}`;
@@ -79,12 +59,6 @@ function getTmdbPosterUrl(posterPath, size = 'w500') {
     return null;
 }
 
-/**
- * Searches for a person (e.g., director) on TMDB.
- * @param {string} name The person's name to search for.
- * @returns {Promise<Object|null>} An object with person details or null if not found/error.
- * @throws {Error} If TMDB_API_KEY is not configured.
- */
 async function searchPersonTMDB(name) {
     if (!TMDB_API_KEY) throw new Error('TMDB_API_KEY not configured in .env'); 
     try {
@@ -98,12 +72,6 @@ async function searchPersonTMDB(name) {
     }
 }
 
-/**
- * Fetches detailed information for a person from TMDB.
- * @param {number} personId The TMDB ID of the person.
- * @returns {Promise<Object|null>} An object with detailed person information or null if not found/error.
- * @throws {Error} If TMDB_API_KEY is not configured.
- */
 async function getPersonDetailsTMDB(personId) {
     if (!TMDB_API_KEY) throw new Error('TMDB_API_KEY not configured in .env'); 
     try {
@@ -117,12 +85,6 @@ async function getPersonDetailsTMDB(personId) {
     }
 }
 
-/**
- * Fetches similar movies for a given TMDB movie ID.
- * @param {number} movieId The TMDB ID of the movie.
- * @returns {Promise<Array<Object>>} An array of similar movie objects, or an empty array if none found/error.
- * @throws {Error} If TMDB_API_KEY is not configured or movieId is missing.
- */
 async function getSimilarMoviesTMDB(movieId) {
     if (!TMDB_API_KEY) {
         throw new Error('TMDB_API_KEY not configured in .env');
@@ -140,7 +102,6 @@ async function getSimilarMoviesTMDB(movieId) {
             return [];
         }
 
-        // Map relevant movie properties
         return response.data.results.map(movie => ({
             id: movie.id,
             title: movie.title,
@@ -156,12 +117,6 @@ async function getSimilarMoviesTMDB(movieId) {
     }
 }
 
-/**
- * Fetches soundtrack details (composers and videos/trailers) for a given TMDB movie ID.
- * @param {number} movieId The TMDB ID of the movie.
- * @returns {Promise<Object|null>} An object with composers, trailer URLs, etc., or null if not found/error.
- * @throws {Error} If TMDB_API_KEY is not configured or movieId is missing.
- */
 async function getMovieSoundtrackDetailsTMDB(movieId) {
     if (!TMDB_API_KEY) {
         throw new Error('TMDB_API_KEY not configured in .env');
@@ -171,7 +126,6 @@ async function getMovieSoundtrackDetailsTMDB(movieId) {
     }
 
     try {
-        // Fetch credits and videos in parallel
         const [creditsResponse, videosResponse] = await Promise.all([
             axios.get(`${TMDB_BASE_URL}/movie/${movieId}/credits`, {
                 params: { api_key: TMDB_API_KEY }
@@ -181,27 +135,24 @@ async function getMovieSoundtrackDetailsTMDB(movieId) {
             })
         ]);
 
-        // Filter for original music composers
         const composers = creditsResponse.data.crew
             .filter(member => member.department === 'Sound' && member.job === 'Original Music Composer')
             .map(member => member.name);
 
-        // Filter for official trailers
         const trailers = videosResponse.data.results
             .filter(video => video.site === 'YouTube' && video.type === 'Trailer')
-            .map(video => `https://www.youtube.com/watch?v=${video.key}`); // Full YouTube URL
+            .map(video => `https://www.youtube.com/watch?v=${video.key}`);
         
-        // Filter for main theme or OST clips
         const mainThemeOrOST = videosResponse.data.results
             .filter(video => video.site === 'YouTube' && (video.type === 'Clip' || video.type === 'Teaser' || video.type === 'Soundtrack'))
-            .sort((a, b) => b.size - a.size) // Prioritize higher quality/size
-            .map(video => `https://www.youtube.com/watch?v=${video.key}`); // Full YouTube URL
+            .sort((a, b) => b.size - a.size) 
+            .map(video => `https://www.youtube.com/watch?v=${video.key}`);
 
 
         return {
             composers: composers,
-            trailers: trailers.slice(0, 3), // Limit to 3 trailers
-            ost_videos: mainThemeOrOST.slice(0, 3) // Limit to 3 OST videos
+            trailers: trailers.slice(0, 3), 
+            ost_videos: mainThemeOrOST.slice(0, 3) 
         };
 
     } catch (error) {
@@ -210,11 +161,6 @@ async function getMovieSoundtrackDetailsTMDB(movieId) {
     }
 }
 
-/**
- * Fetches a list of genres from TMDB.
- * @returns {Promise<Array<Object>>} An array of genre objects (id, name).
- * @throws {Error} If TMDB_API_KEY is not configured.
- */
 async function getTmdbGenres() {
     if (!TMDB_API_KEY) {
         throw new Error('TMDB_API_KEY not configured in .env');
@@ -230,16 +176,6 @@ async function getTmdbGenres() {
     }
 }
 
-/**
- * Discovers movies based on various filters (year, genre, country).
- * @param {object} filters Object containing filter criteria.
- * @param {number} [filters.year] Release year of the movie.
- * @param {string} [filters.genreIds] Comma-separated TMDB genre IDs.
- * @param {string} [filters.countryCode] ISO 3166-1 country code (e.g., 'US', 'BR').
- * @param {number} [page=1] Page number for results.
- * @returns {Promise<Array<Object>>} An array of movie objects.
- * @throws {Error} If TMDB_API_KEY is not configured.
- */
 async function discoverMoviesTMDB(filters = {}, page = 1) {
     if (!TMDB_API_KEY) {
         throw new Error('TMDB_API_KEY not configured in .env');
@@ -248,9 +184,9 @@ async function discoverMoviesTMDB(filters = {}, page = 1) {
     const params = {
         api_key: TMDB_API_KEY,
         language: 'en-US',
-        sort_by: 'popularity.desc', // Sort by popularity in descending order
+        sort_by: 'popularity.desc', 
         page: page,
-        'vote_count.gte': 50 // Minimum vote count to filter out less known movies
+        'vote_count.gte': 50 
     };
 
     if (filters.year) {
@@ -265,11 +201,10 @@ async function discoverMoviesTMDB(filters = {}, page = 1) {
 
     try {
         const response = await axios.get(`${TMDB_BASE_URL}/discover/movie`, { params });
-        // Map relevant movie properties from the discovery results
         return response.data.results.map(movie => ({
             id: movie.id,
             title: movie.title,
-            release_date: movie.release_date, // ADDED: Includes release date
+            release_date: movie.release_date, 
             overview: movie.overview,
             poster_path: movie.poster_path,
             vote_average: movie.vote_average,
@@ -281,13 +216,6 @@ async function discoverMoviesTMDB(filters = {}, page = 1) {
     }
 }
 
-/**
- * Searches for movies on TMDB by title and optional year.
- * @param {string} query The movie title to search for.
- * @param {number|null} year Optional: The release year to refine the search.
- * @returns {Promise<Object>} The TMDB search results object.
- * @throws {Error} If TMDB_API_KEY is not configured.
- */
 async function searchMoviesTMDB(query, year = null) {
     if (!TMDB_API_KEY) {
         throw new Error('TMDB_API_KEY not configured in .env');
@@ -305,7 +233,6 @@ async function searchMoviesTMDB(query, year = null) {
     }
 }
 
-// Export all functions for use in other modules
 export { 
     searchMovieTMDB, 
     getTmdbPosterUrl,

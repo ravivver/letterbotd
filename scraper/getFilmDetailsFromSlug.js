@@ -1,22 +1,14 @@
-// scraper/getFilmDetailsFromSlug.js
-
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-/**
- * Scrapes film details from its Letterboxd page using the slug.
- * @param {string} filmSlug The film slug (e.g., "scarface-1983").
- * @returns {Promise<Object>} Object with title, year, posterUrlLetterboxd.
- * Returns null if the film is not found or if essential data cannot be extracted.
- */
 async function getFilmDetailsFromSlug(filmSlug) {
     if (!filmSlug) {
-        console.error("[Scraper - FilmDetails] Error: Film slug is required."); // Translated
+        console.error("[Scraper - FilmDetails] Error: Film slug is required.");
         return null;
     }
 
     const url = `https://letterboxd.com/film/${filmSlug}/`;
-    console.log(`[Scraper - FilmDetails] Fetching details for slug: ${filmSlug} at URL: ${url}`); // Translated
+    console.log(`[Scraper - FilmDetails] Fetching details for slug: ${filmSlug} at URL: ${url}`);
 
     try {
         const response = await axios.get(url, {
@@ -30,22 +22,19 @@ async function getFilmDetailsFromSlug(filmSlug) {
 
         const $ = cheerio.load(response.data);
 
-        // --- Film Page Error Checks ---
         const pageTitleMeta = $('meta[property="og:title"]').attr('content');
         if (pageTitleMeta && (pageTitleMeta.includes('Page Not Found') || pageTitleMeta.includes('404'))) {
-            console.log(`[Scraper - FilmDetails] Film with slug "${filmSlug}" not found (via og:title or 404).`); // Translated
+            console.log(`[Scraper - FilmDetails] Film with slug "${filmSlug}" not found (via og:title or 404).`);
             return null;
         }
         if (response.status === 404) {
-            console.log(`[Scraper - FilmDetails] Film with slug "${filmSlug}" not found (status 404).`); // Translated
+            console.log(`[Scraper - FilmDetails] Film with slug "${filmSlug}" not found (status 404).`);
             return null;
         }
-        // --- End of Error Checks ---
 
         let title = null;
         let year = null;
 
-        // --- TITLE: Using the provided selector ---
         title = $('h1 .name.prettify').text().trim();
         if (!title) {
             const ogTitle = $('meta[property="og:title"]').attr('content');
@@ -59,7 +48,6 @@ async function getFilmDetailsFromSlug(filmSlug) {
             }
         }
         
-        // --- YEAR: Using the provided selector ---
         const yearElement = $('span.releasedate a');
         if (yearElement.length) {
             const yearText = yearElement.text().trim();
@@ -67,13 +55,12 @@ async function getFilmDetailsFromSlug(filmSlug) {
             if (!isNaN(parsedYear)) {
                 year = parsedYear;
             } else {
-                console.log(`[Scraper - FilmDetails] Invalid year found for "${filmSlug}": ${yearText}`); // Translated
+                console.log(`[Scraper - FilmDetails] Invalid year found for "${filmSlug}": ${yearText}`);
             }
         } else {
-            console.log(`[Scraper - FilmDetails] Year element (span.releasedate a) NOT found for "${filmSlug}".`); // Translated
+            console.log(`[Scraper - FilmDetails] Year element (span.releasedate a) NOT found for "${filmSlug}".`);
         }
 
-        // Fallback for year from og:title (if og:title had the year and we didn't get it before)
         if (year === null) {
              const ogTitle = $('meta[property="og:title"]').attr('content');
             if (ogTitle) {
@@ -82,13 +69,12 @@ async function getFilmDetailsFromSlug(filmSlug) {
                     const parsedYear = parseInt(match[1]);
                     if (!isNaN(parsedYear)) {
                         year = parsedYear;
-                        console.log(`[Scraper - FilmDetails] Year ${year} extracted from og:title (fallback).`); // Translated
+                        console.log(`[Scraper - FilmDetails] Year ${year} extracted from og:title (fallback).`);
                     }
                 }
             }
         }
 
-        // Poster URL (from background-image of the main div or img tag)
         let posterUrlLetterboxd = null;
         const posterDiv = $('.film-poster.poster'); 
         if (posterDiv.length) {
@@ -100,7 +86,6 @@ async function getFilmDetailsFromSlug(filmSlug) {
                 }
             }
         }
-        // Fallback: img tag inside film-poster (if not background-image)
         if (!posterUrlLetterboxd) {
             const imgElement = $('.film-poster img.image');
             if (imgElement.length) {
@@ -109,11 +94,11 @@ async function getFilmDetailsFromSlug(filmSlug) {
         }
 
         if (!title || year === null) { 
-             console.log(`[Scraper - FilmDetails] Failed to extract essential title or year for "${filmSlug}". Title: "${title}", Year: ${year}`); // Translated
+             console.log(`[Scraper - FilmDetails] Failed to extract essential title or year for "${filmSlug}". Title: "${title}", Year: ${year}`);
              return null;
         }
 
-        console.log(`[Scraper - FilmDetails] Details for "${filmSlug}": Title: "${title}", Year: ${year}, LB Poster: ${posterUrlLetterboxd ? 'Found' : 'Not found'}`); // Translated
+        console.log(`[Scraper - FilmDetails] Details for "${filmSlug}": Title: "${title}", Year: ${year}, LB Poster: ${posterUrlLetterboxd ? 'Found' : 'Not found'}`);
 
         return {
             title,
@@ -123,7 +108,7 @@ async function getFilmDetailsFromSlug(filmSlug) {
         };
 
     } catch (error) {
-        console.error(`Unexpected error fetching film details for "${filmSlug}":`, error.message); // Translated
+        console.error(`Unexpected error fetching film details for "${filmSlug}":`, error.message);
         return null; 
     }
 }

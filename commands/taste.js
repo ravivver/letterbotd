@@ -1,5 +1,3 @@
-// commands/taste.js
-
 import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -37,7 +35,7 @@ export default {
 
         let usersData = {};
         try {
-            usersData = JSON.parse(await fs.readFile(usersFilePath, 'utf8')); //
+            usersData = JSON.parse(await fs.readFile(usersFilePath, 'utf8'));
         } catch (e) {
             console.error("Error reading users.json:", e);
             await interaction.editReply({ content: 'An error occurred while loading user data. Please try again later.', ephemeral: true });
@@ -46,11 +44,11 @@ export default {
 
         
         const getLetterboxdUsername = (discordId) => {
-            const userEntry = usersData[discordId]; //
+            const userEntry = usersData[discordId];
             if (typeof userEntry === 'string') {
                 return userEntry;
             } else if (typeof userEntry === 'object' && userEntry !== null && userEntry.letterboxd) {
-                return userEntry.letterboxd; //
+                return userEntry.letterboxd;
             }
             return null;
         };
@@ -70,10 +68,9 @@ export default {
         try {
             await interaction.editReply(`Fetching diary data for **${letterboxdUsername1}** and **${letterboxdUsername2}**... This might take a moment if they have large diaries.`);
 
-            // Fetch full diaries for both users
             const [diary1, diary2] = await Promise.all([
-                getFullDiary(letterboxdUsername1), //
-                getFullDiary(letterboxdUsername2) //
+                getFullDiary(letterboxdUsername1),
+                getFullDiary(letterboxdUsername2)
             ]);
 
             if (!diary1 || diary1.length === 0) {
@@ -85,28 +82,27 @@ export default {
                 return;
             }
 
-            // --- Compatibility Calculation Logic ---
             const user1Ratings = new Map();
             diary1.forEach(entry => {
                 if (entry.rating !== null && entry.slug) {
-                    user1Ratings.set(entry.slug, entry.rating); //
+                    user1Ratings.set(entry.slug, entry.rating);
                 }
             });
 
-            const commonFilms = []; // Films that both have watched and rated
-            const ratingDifferences = []; // Rating differences for common films
+            const commonFilms = [];
+            const ratingDifferences = [];
 
             diary2.forEach(entry => {
                 if (entry.rating !== null && entry.slug && user1Ratings.has(entry.slug)) {
-                    const ratingUser1 = user1Ratings.get(entry.slug); //
-                    const ratingUser2 = entry.rating; //
+                    const ratingUser1 = user1Ratings.get(entry.slug);
+                    const ratingUser2 = entry.rating;
                     
                     const diff = Math.abs(ratingUser1 - ratingUser2);
                     ratingDifferences.push(diff);
                     commonFilms.push({
-                        slug: entry.slug, //
-                        title: entry.title, //
-                        year: entry.year, //
+                        slug: entry.slug,
+                        title: entry.title,
+                        year: entry.year,
                         rating1: ratingUser1,
                         rating2: ratingUser2,
                         difference: diff
@@ -121,21 +117,17 @@ export default {
                 const totalDifference = ratingDifferences.reduce((sum, diff) => sum + diff, 0);
                 const averageDifference = totalDifference / ratingDifferences.length;
 
-                // Letterboxd ratings go from 0.5 to 5, so max difference is 4.5
                 const maxPossibleDifference = 4.5; 
                 compatibilityPercentage = Math.max(0, 100 - (averageDifference / maxPossibleDifference) * 100);
             }
             
-            // Round the percentage to two decimal places
             compatibilityPercentage = parseFloat(compatibilityPercentage.toFixed(2));
 
-            // For the embed, we can take the 3 films with the smallest difference and the 3 with the largest difference
             commonFilms.sort((a, b) => a.difference - b.difference);
             const mostAgreedFilms = commonFilms.slice(0, 3);
             const mostDisagreedFilms = commonFilms.slice().reverse().slice(0, 3);
 
 
-            // Create and send the result embed
             const embed = createTasteEmbed(
                 discordUser1.displayName || discordUser1.username,
                 discordUser2.displayName || discordUser2.username,

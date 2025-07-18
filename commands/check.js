@@ -1,5 +1,3 @@
-// commands/check.js (Final Version with Stable Public Flow - Translated to English)
-
 import { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -21,13 +19,12 @@ export const data = new SlashCommandBuilder()
     .addStringOption(option => option.setName('film').setDescription('The title of the movie you want to check.').setRequired(true));
 
 export async function execute(interaction) {
-    // Initial validations remain ephemeral
     const targetDiscordUser = interaction.options.getUser('user');
     let usersData;
     try {
         usersData = JSON.parse(await fs.readFile(usersFilePath, 'utf8'));
     } catch (error) {
-        return interaction.reply({ content: 'Error reading user file.', flags: [MessageFlags.Ephemeral] }); // Translated
+        return interaction.reply({ content: 'Error reading user file.', flags: [MessageFlags.Ephemeral] });
     }
     const userEntry = usersData[targetDiscordUser.id];
     let letterboxdUsername;
@@ -35,10 +32,9 @@ export async function execute(interaction) {
     else if (typeof userEntry === 'object' && userEntry !== null) letterboxdUsername = userEntry.letterboxd;
 
     if (!letterboxdUsername) {
-        return interaction.reply({ content: `User ${targetDiscordUser.username} has not linked an account.`, flags: [MessageFlags.Ephemeral] }); // Translated
+        return interaction.reply({ content: `User ${targetDiscordUser.username} has not linked an account.`, flags: [MessageFlags.Ephemeral] });
     }
 
-    // MAIN CHANGE: From here, the interaction is public.
     await interaction.deferReply(); 
 
     const filmQuery = interaction.options.getString('film');
@@ -46,22 +42,20 @@ export async function execute(interaction) {
     const filmResults = searchResults.filter(r => r.type === 'film');
 
     if (filmResults.length === 0) {
-        // This error will now be public, as part of the normal flow
-        return interaction.editReply({ content: `No movies found for the search "${filmQuery}".` }); // Translated
+        return interaction.editReply({ content: `No movies found for the search "${filmQuery}".` });
     }
 
     if (filmResults.length > 1) {
         const filmOptions = filmResults.map(film => ({
             label: film.title.substring(0, 100),
-            description: film.year ? `Year: ${film.year}` : 'Movie', // Translated
+            description: film.year ? `Year: ${film.year}` : 'Movie',
             value: film.slug,
         }));
-        const selectMenu = new StringSelectMenuBuilder().setCustomId('checkfilm_select').setPlaceholder('Multiple movies found. Select one.').addOptions(filmOptions.slice(0, 25)); // Translated
+        const selectMenu = new StringSelectMenuBuilder().setCustomId('checkfilm_select').setPlaceholder('Multiple movies found. Select one.').addOptions(filmOptions.slice(0, 25));
         const row = new ActionRowBuilder().addComponents(selectMenu);
 
-        // The selection menu is now sent publicly
         const reply = await interaction.editReply({
-            content: `We found multiple movies. Please choose one to check:`, // Translated
+            content: `We found multiple movies. Please choose one to check:`,
             components: [row],
             fetchReply: true, 
         });
@@ -75,7 +69,7 @@ export async function execute(interaction) {
             const filmSlug = selection.values[0];
             await processFilmCheck(selection, targetDiscordUser, letterboxdUsername, filmSlug);
         } catch (err) {
-            await interaction.editReply({ content: 'Selection time has expired.', components: [] }); // Translated
+            await interaction.editReply({ content: 'Selection time has expired.', components: [] });
         }
     } else {
         const filmSlug = filmResults[0].slug;
@@ -85,12 +79,12 @@ export async function execute(interaction) {
 
 async function processFilmCheck(interaction, discordUser, letterboxdUsername, filmSlug) {
     if (interaction.isMessageComponent()) {
-        await interaction.update({ content: 'Checking diary...', components: [] }); // Translated
+        await interaction.update({ content: 'Checking diary...', components: [] });
     }
 
     try {
         const filmDetails = await getFilmDetailsFromSlug(filmSlug);
-        if (!filmDetails) throw new Error('Could not retrieve movie details from Letterboxd.'); // Translated
+        if (!filmDetails) throw new Error('Could not retrieve movie details from Letterboxd.');
         
         const [diaryStatus, movieDataTMDB] = await Promise.all([
             checkFilmInDiary(letterboxdUsername, filmSlug),
@@ -98,20 +92,20 @@ async function processFilmCheck(interaction, discordUser, letterboxdUsername, fi
         ]);
 
         const embed = new EmbedBuilder()
-            .setAuthor({ name: `Checking for: ${letterboxdUsername}`, iconURL: discordUser.displayAvatarURL() }) // Translated
+            .setAuthor({ name: `Checking for: ${letterboxdUsername}`, iconURL: discordUser.displayAvatarURL() })
             .setTitle(`${filmDetails.title} (${filmDetails.year})`)
             .setURL(`https://letterboxd.com/film/${filmSlug}/`)
             .setThumbnail(movieDataTMDB ? getTmdbPosterUrl(movieDataTMDB.poster_path) : null);
 
         if (diaryStatus.watched) {
-            embed.setColor(0x23A55A); // Green
-            let description = `🟢 ** Yes, ${discordUser.displayName} has watched it!**`; // Translated
+            embed.setColor(0x23A55A);
+            let description = `🟢 ** Yes, ${discordUser.displayName} has watched it!**`;
             let detailsLine = '';
 
             if (diaryStatus.rating) {
                 const stars = '⭐'.repeat(Math.floor(diaryStatus.rating));
                 const halfStar = (diaryStatus.rating % 1 !== 0) ? '½' : '';
-                detailsLine += `**Rating:** ${stars}${halfStar}`; // Translated
+                detailsLine += `**Rating:** ${stars}${halfStar}`;
             }
 
             if (diaryStatus.date) {
@@ -119,7 +113,7 @@ async function processFilmCheck(interaction, discordUser, letterboxdUsername, fi
                 if (detailsLine.length > 0) {
                     detailsLine += '   '; 
                 }
-                detailsLine += `** Date:** ${formattedDate}`; // Translated
+                detailsLine += `** Date:** ${formattedDate}`;
             }
             
             if(detailsLine.length > 0) {
@@ -129,14 +123,14 @@ async function processFilmCheck(interaction, discordUser, letterboxdUsername, fi
             embed.setDescription(description);
 
         } else {
-            embed.setColor(0xED4245); // Red
-            embed.setDescription(`🔴 ** No, ${discordUser.displayName} has not watched it.**`); // Translated
+            embed.setColor(0xED4245);
+            embed.setDescription(`🔴 ** No, ${discordUser.displayName} has not watched it.**`);
         }
         
         await interaction.editReply({ content: '', embeds: [embed], components: [] });
 
     } catch (error) {
-        console.error('Error processing film check:', error); // Translated
-        await interaction.editReply({ content: `An error occurred while checking the movie: ${error.message}`, embeds: [], components: [] }); // Translated
+        console.error('Error processing film check:', error);
+        await interaction.editReply({ content: `An error occurred while checking the movie: ${error.message}`, embeds: [], components: [] });
     }
 }

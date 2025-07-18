@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { searchMovieTMDB, getTmdbPosterUrl } from '../api/tmdb.js';
-import { getGlobalTopWatchedFilms } from '../database/db.js'; // Import the new global function
+import { getGlobalTopWatchedFilms } from '../database/db.js';
 
 export const data = new SlashCommandBuilder()
     .setName('topbot')
@@ -10,15 +10,12 @@ export async function execute(interaction) {
     await interaction.deferReply();
 
     try {
-        // Use getGlobalTopWatchedFilms from db.js to fetch data
-        // No guildId is passed here, as it's a global ranking
         const rows = await getGlobalTopWatchedFilms(5); 
 
         if (!rows || rows.length === 0) {
             return interaction.editReply('No movies have been watched across all servers yet. Use the /sync command to add movies!');
         }
 
-        // Fetch poster for the #1 film from TMDB
         const topFilm = rows[0];
         let topFilmDataTMDB = null;
         if (topFilm) {
@@ -33,7 +30,7 @@ export async function execute(interaction) {
         }).join('\n');
 
         const topEmbed = new EmbedBuilder()
-            .setColor(0xF4B740) // Yellow/Orange color
+            .setColor(0xF4B740)
             .setTitle(`🏆 Top 5 Most Watched Films (Global)`)
             .setDescription(description)
             .setThumbnail(topFilmDataTMDB ? getTmdbPosterUrl(topFilmDataTMDB.poster_path) : null);

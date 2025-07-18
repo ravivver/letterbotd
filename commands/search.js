@@ -1,8 +1,5 @@
-// commands/search.js (Single command with mutually exclusive optional fields)
-
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
 import { searchMovieTMDB, getTmdbPosterUrl, searchPersonTMDB, getPersonDetailsTMDB } from '../api/tmdb.js';
-// Reintroduzindo os scrapers para obter os slugs/URLs do Letterboxd
 import { searchLetterboxd } from '../scraper/searchLetterboxd.js';
 import getFilmDetailsFromSlug from '../scraper/getFilmDetailsFromSlug.js';
 
@@ -40,18 +37,16 @@ export async function execute(interaction) {
 
     try {
         if (filmQuery) {
-            // --- Search for Film ---
-            const movieData = await searchMovieTMDB(filmQuery); // Busca dados no TMDB
+            const movieData = await searchMovieTMDB(filmQuery);
             
             if (!movieData) {
                 return interaction.editReply({ content: `No movie found for "${filmQuery}" on TMDB.`, ephemeral: true });
             }
 
-            // Busca o slug do Letterboxd usando o nome do filme para gerar o link correto
             const letterboxdSearch = await searchLetterboxd(movieData.title);
             const filmResult = letterboxdSearch.find(r => r.type === 'film' && r.slug);
             
-            let filmUrlLetterboxd = `https://www.themoviedb.org/movie/${movieData.id}`; // Fallback TMDB URL
+            let filmUrlLetterboxd = `https://www.themoviedb.org/movie/${movieData.id}`;
             if (filmResult) {
                 filmUrlLetterboxd = `https://letterboxd.com/film/${filmResult.slug}`;
             }
@@ -59,7 +54,7 @@ export async function execute(interaction) {
             const filmEmbed = new EmbedBuilder()
                 .setColor(0x00E054)
                 .setTitle(`${movieData.title}`)
-                .setURL(filmUrlLetterboxd) // Define a URL do Letterboxd (ou TMDB se não encontrar)
+                .setURL(filmUrlLetterboxd)
                 .setDescription(movieData.overview || 'Synopsis not available.')
                 .addFields(
                     { name: 'Genres', value: movieData.genres.join(', ') || 'N/A', inline: true },
@@ -71,18 +66,16 @@ export async function execute(interaction) {
             await interaction.editReply({ embeds: [filmEmbed] });
 
         } else if (directorQuery) {
-            // --- Search for Director ---
-            const personData = await searchPersonTMDB(directorQuery); // Busca a pessoa na TMDB
+            const personData = await searchPersonTMDB(directorQuery);
 
             if (!personData) {
                 return interaction.editReply({ content: `No director found for "${directorQuery}" on TMDB.`, ephemeral: true });
             }
 
-            // Busca a URL do Letterboxd para o diretor usando o scraper
             const letterboxdSearch = await searchLetterboxd(personData.name);
             const directorResult = letterboxdSearch.find(r => r.type === 'director' && r.pageUrl);
             
-            let directorUrlLetterboxd = `https://www.themoviedb.org/person/${personData.id}`; // Fallback TMDB URL
+            let directorUrlLetterboxd = `https://www.themoviedb.org/person/${personData.id}`;
             if (directorResult) {
                 directorUrlLetterboxd = `https://letterboxd.com${directorResult.pageUrl}`;
             }
@@ -97,7 +90,7 @@ export async function execute(interaction) {
             const directorEmbed = new EmbedBuilder()
                 .setColor(0x445566)
                 .setTitle(directorDetails.name)
-                .setURL(directorUrlLetterboxd) // Define a URL do Letterboxd (ou TMDB se não encontrar)
+                .setURL(directorUrlLetterboxd)
                 .setDescription(biography)
                 .setThumbnail(getTmdbPosterUrl(personData.profile_path, 'w500'));
 

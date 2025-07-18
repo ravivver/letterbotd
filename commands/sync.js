@@ -27,14 +27,13 @@ export async function execute(interaction) {
     if (!userEntry) {
         return interaction.reply({ content: 'You need to link your account with /link before synchronizing.', flags: [MessageFlags.Ephemeral] });
     } 
-    // Ensure userEntry is an object, if it's still in string format
     if (typeof userEntry === 'string') {
         userEntry = { letterboxd: userEntry, last_sync_date: null };
-        usersData[user.id] = userEntry; // Update in usersData as well
+        usersData[user.id] = userEntry;
     }
 
     const letterboxdUsername = userEntry.letterboxd;
-    const guildId = interaction.guildId; // Get the guild ID
+    const guildId = interaction.guildId;
 
     if (!guildId) {
         await interaction.editReply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
@@ -66,19 +65,17 @@ export async function execute(interaction) {
         let newEntriesFound = 0;
 
         for (const entry of diaryEntries) {
-            // Pass guildId to checkIfEntryExists
             const exists = await checkIfEntryExists(user.id, letterboxdUsername, entry.viewing_id, guildId); 
             if (!exists) {
                 entriesToSave.push({
                     ...entry,
                     discord_id: user.id,
                     letterboxd_username: letterboxdUsername,
-                    guild_id: guildId // NEW: Pass guild_id here
+                    guild_id: guildId
                 });
                 newEntriesFound++;
             } else {
                 skippedEntriesCount++;
-                // console.log(`[Sync Command Debug] Entry already exists in DB (viewing_id: ${entry.viewing_id}), skipping: ${entry.title} (${entry.date})`); 
             }
         }
 
