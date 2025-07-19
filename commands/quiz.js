@@ -49,7 +49,9 @@ export default {
             const quizMovie = eligibleMovies[Math.floor(Math.random() * eligibleMovies.length)];
             
             const distractorMovies = [];
-            const usedMovieIds = new Set([quizMovie.id]);
+            const usedMovieIds = new Set(); 
+            
+            usedMovieIds.add(quizMovie.id); 
 
             while (distractorMovies.length < 9) {
                 const randomIndex = Math.floor(Math.random() * eligibleMovies.length);
@@ -62,9 +64,29 @@ export default {
             }
 
             const allQuizOptions = [quizMovie, ...distractorMovies];
-            for (let i = allQuizOptions.length - 1; i > 0; i--) {
+            
+            // FILTRAGEM PARA GARANTIR IDs ÚNICOS
+            const finalUniqueQuizMovies = [];
+            const finalUsedIds = new Set();
+
+            for (const movie of allQuizOptions) {
+                if (!finalUsedIds.has(movie.id)) {
+                    finalUniqueQuizMovies.push(movie);
+                    finalUsedIds.add(movie.id);
+                }
+            }
+
+            // Garante que ainda há 10 filmes após a filtragem de duplicatas
+            if (finalUniqueQuizMovies.length < 10) {
+                await interaction.editReply('Não foi possível encontrar filmes únicos suficientes para o quiz. Tente novamente mais tarde.');
+                activeQuizzes.delete(channelId);
+                return;
+            }
+
+            // Embaralha a lista final de filmes únicos
+            for (let i = finalUniqueQuizMovies.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
-                [allQuizOptions[i], allQuizOptions[j]] = [allQuizOptions[j], allQuizOptions[j]];
+                [finalUniqueQuizMovies[i], finalUniqueQuizMovies[j]] = [finalUniqueQuizMovies[j], finalUniqueQuizMovies[i]];
             }
 
             const contentTypeRoll = Math.random();
@@ -91,7 +113,7 @@ export default {
                 letterboxdUrl = `https://letterboxd.com/film/${foundFilmInLetterboxd.slug}/`;
             }
 
-            const selectMenuOptions = allQuizOptions.map(movie => ({
+            const selectMenuOptions = finalUniqueQuizMovies.map(movie => ({
                 label: `${movie.title} (${new Date(movie.release_date).getFullYear() || 'N/A'})`,
                 value: movie.id.toString(),
             }));
