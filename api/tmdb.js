@@ -5,7 +5,7 @@ dotenv.config();
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY; 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const TMDB_IMAGE_BASE_URL = 'https://image.themoviedb.org/t/p/'; 
+const TMDB_IMAGE_BASE_URL = 'https://media.themoviedb.org/t/p/'; 
 
 async function searchMovieTMDB(query, year = null) {
     if (!TMDB_API_KEY) {
