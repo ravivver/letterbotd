@@ -502,7 +502,7 @@ async function createLetterIDEmbed(cardData) {
         const statLineHeight = 35;
         const statFontSize = 22;
 
-        const newStatYStart = 140; 
+        const newStatYStart = 150; 
 
         addTextSvgOverlay(`FILMS WATCHED: ${cardData.totalFilms || 'N/A'}`, statXStart, newStatYStart, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
         addTextSvgOverlay(`FILMS THIS YEAR: ${cardData.filmsThisYear || 'N/A'}`, statXStart, newStatYStart + statLineHeight, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');

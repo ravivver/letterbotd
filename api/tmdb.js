@@ -37,7 +37,7 @@ async function searchMovieTMDB(query, year = null) {
         const directors = credits.crew.filter(member => member.job === 'Director').map(member => member.name);
 
         return {
-            id: movie.id,
+            id: movie.id, // Adicionado o ID do TMDB
             title: movie.title,
             overview: movie.overview,
             poster_path: movie.poster_path,
@@ -233,6 +233,25 @@ async function searchMoviesTMDB(query, year = null) {
     }
 }
 
+async function getMovieQuotesTMDB(movieId) {
+    if (!TMDB_API_KEY) {
+        throw new Error('TMDB_API_KEY not configured in .env');
+    }
+    try {
+        const response = await axios.get(`${TMDB_BASE_URL}/movie/${movieId}/quotes`, {
+            params: { api_key: TMDB_API_KEY, language: 'en-US' }
+        });
+        if (response.data.results && response.data.results.length > 0) {
+            return response.data.results[0].content; 
+        }
+        return null;
+    } catch (error) {
+        console.error(`Error fetching quotes for TMDB ID ${movieId}:`, error.message);
+        return null;
+    }
+}
+
+
 export { 
     searchMovieTMDB, 
     getTmdbPosterUrl,
@@ -242,5 +261,6 @@ export {
     getMovieSoundtrackDetailsTMDB,
     getTmdbGenres,
     discoverMoviesTMDB, 
-    searchMoviesTMDB
+    searchMoviesTMDB,
+    getMovieQuotesTMDB
 };
