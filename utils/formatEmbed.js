@@ -5,12 +5,31 @@ import axios from 'axios';
 import QRCode from 'qrcode';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url'; 
+import fs from 'node:fs/promises'; 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const idCardTemplatePath = path.join(__dirname, '..', 'assets', 'letterid_template.png');
 const signatureFontPath = path.join(__dirname, '..', 'assets', 'signature_font.ttf');
+
+let signatureFontBase64 = null;
+
+async function loadSignatureFontBase64() {
+    if (!signatureFontBase64) {
+        try {
+            const fontBuffer = await fs.readFile(signatureFontPath);
+            signatureFontBase64 = fontBuffer.toString('base64');
+            console.log('Signature font loaded as Base64 successfully.');
+        } catch (e) {
+            console.error('Error loading signature font as Base64:', e);
+            signatureFontBase64 = null; 
+        }
+    }
+}
+
+loadSignatureFontBase64();
+
 
 function formatDateEn(dateString) {
     if (!dateString) return 'N/A';
@@ -469,8 +488,11 @@ async function createLetterIDEmbed(cardData) {
             let fontFamily = 'Arial';
             let fontSrc = '';
 
-            if (fontPathOrName && fontPathOrName.endsWith('.ttf')) {
-                fontFamily = `'Bastliga One'`; 
+            if (fontPathOrName === signatureFontPath && signatureFontBase64) {
+                fontFamily = `'Bastliga One'`;
+                fontSrc = `@font-face { font-family: ${fontFamily}; src: url('data:font/ttf;base64,${signatureFontBase64}') format('truetype'); }`;
+            } else if (fontPathOrName && fontPathOrName.endsWith('.ttf')) {
+                fontFamily = `'CustomFontName'`;
                 fontSrc = `@font-face { font-family: ${fontFamily}; src: url('${fontPathOrName}') format('truetype'); }`;
             } else if (fontPathOrName) {
                 fontFamily = `'${fontPathOrName}'`; 
@@ -497,12 +519,11 @@ async function createLetterIDEmbed(cardData) {
         addTextSvgOverlay(cardData.username.toUpperCase(), 25, 508, 32, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
 
         addTextSvgOverlay(cardData.username, 500, 500, 80, signatureFontPath);
-
         const statXStart = 370;
         const statLineHeight = 35;
         const statFontSize = 22;
 
-        const newStatYStart = 150; 
+        const newStatYStart = 140; 
 
         addTextSvgOverlay(`FILMS WATCHED: ${cardData.totalFilms || 'N/A'}`, statXStart, newStatYStart, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
         addTextSvgOverlay(`FILMS THIS YEAR: ${cardData.filmsThisYear || 'N/A'}`, statXStart, newStatYStart + statLineHeight, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
