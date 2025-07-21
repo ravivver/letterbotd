@@ -551,7 +551,7 @@ async function createLetterIDEmbed(cardData) {
         addTextSvgOverlay(cardData.username, 650, 700, 80, dancingScriptBoldFontPath); 
         const statXStart = 480;
         const statLineHeight = 60;
-        const statFontSize = 60;
+        const statFontSize = 50;
 
         const newStatYStart = 250; 
 

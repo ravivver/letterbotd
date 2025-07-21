@@ -2,8 +2,8 @@ import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import fs from 'node:fs'; // Manter esta importação síncrona para fs.readdirSync
-import { promises as fsPromises } from 'node:fs'; // Adicionado: Importação assíncrona para escrita de arquivos
 import { config } from 'dotenv';
+
 import { checkDailyWatchedFilms } from './tasks/dailyWatchedChecker.js'; 
 
 import { handleJoinButton, handleCloseButton } from './commands/familymatch.js';
@@ -12,35 +12,6 @@ config();
 
 const token = process.env.DISCORD_BOT_TOKEN; 
 
-// --- Configuração do Logging em Arquivo ---
-const LOG_FILE_PATH = join(dirname(fileURLToPath(import.meta.url)), 'bot_logs.txt');
-
-async function writeToLogFile(message) {
-    const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] ${message}\n`;
-    try {
-        await fsPromises.appendFile(LOG_FILE_PATH, logMessage, 'utf8');
-    } catch (err) {
-        // Se houver erro ao escrever no arquivo, pelo menos tente logar no console
-        console.error(`ERROR WRITING TO LOG FILE: ${err.message}\nOriginal Message: ${message}`);
-    }
-}
-
-// Sobrescrever console.log e console.error para incluir logging em arquivo
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
-
-console.log = function(...args) {
-    originalConsoleLog.apply(console, args);
-    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
-    writeToLogFile(`INFO: ${message}`);
-};
-
-console.error = function(...args) {
-    originalConsoleError.apply(console, args);
-    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
-    writeToLogFile(`ERROR: ${message}`);
-};
 // --- Fim da Configuração do Logging em Arquivo ---
 
 
