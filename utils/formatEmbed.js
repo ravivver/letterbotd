@@ -452,15 +452,15 @@ async function createLetterIDEmbed(cardData) {
         const templateMetadata = await templateImage.metadata();
 
         const avatarBuffer = await axios.get(cardData.avatarUrl, { responseType: 'arraybuffer' });
-        const avatarWidth = 310;
-        const avatarHeight = 352;
-        const avatarX = 25;
-        const avatarY = 23;
+        const avatarWidth = 420;
+        const avatarHeight = 545;
+        const avatarX = 13;
+        const avatarY = 43;
         const avatarImage = await sharp(avatarBuffer.data).resize(avatarWidth, avatarHeight, { fit: 'cover' }).toBuffer();
 
         const qrCodeOptions = {
             errorCorrectionLevel: 'H', 
-            width: 90,
+            width: 180,
             color: {
                 dark: '#000000FF', 
                 light: '#00000000' 
@@ -469,14 +469,14 @@ async function createLetterIDEmbed(cardData) {
         const qrCodeBuffer = await QRCode.toBuffer(cardData.profileUrl, qrCodeOptions);
 
         const qrCodeImage = await sharp(qrCodeBuffer)
-            .resize(90, 90)
+            .resize(130, 130)
             .toBuffer();
 
         let compositeOperations = [];
 
         compositeOperations.push({ input: avatarImage, top: avatarY, left: avatarX }); 
-        const qrCodeX = 880; 
-        const qrCodeY = 510; 
+        const qrCodeX = 1350; 
+        const qrCodeY = 800; 
         compositeOperations.push({ input: qrCodeImage, top: qrCodeY, left: qrCodeX });
 
         const overlaysForTextComposite = [];
@@ -516,14 +516,14 @@ async function createLetterIDEmbed(cardData) {
         };
 
 
-        addTextSvgOverlay(cardData.username.toUpperCase(), 25, 508, 32, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
+        addTextSvgOverlay(cardData.username.toUpperCase(), 15, 785, 55, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
 
-        addTextSvgOverlay(cardData.username, 500, 500, 80, signatureFontPath);
-        const statXStart = 370;
-        const statLineHeight = 35;
-        const statFontSize = 22;
+        addTextSvgOverlay(cardData.username, 650, 700, 80, signatureFontPath);
+        const statXStart = 480;
+        const statLineHeight = 60;
+        const statFontSize = 60;
 
-        const newStatYStart = 140; 
+        const newStatYStart = 250; 
 
         addTextSvgOverlay(`FILMS WATCHED: ${cardData.totalFilms || 'N/A'}`, statXStart, newStatYStart, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
         addTextSvgOverlay(`FILMS THIS YEAR: ${cardData.filmsThisYear || 'N/A'}`, statXStart, newStatYStart + statLineHeight, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
@@ -534,7 +534,7 @@ async function createLetterIDEmbed(cardData) {
         addTextSvgOverlay(`WATCHLIST: ${cardData.watchlistCount || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 4, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
         addTextSvgOverlay(`MOST COMMON RATING: ${cardData.mostCommonRating || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 5, statFontSize, 'Arial', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
 
-        addTextSvgOverlay(`"${cardData.randomQuote}"`, statXStart, newStatYStart + statLineHeight * 6.5 + 20, 18, 'Arial', { r: 70, g: 70, b: 70, alpha: 255 }); 
+        addTextSvgOverlay(`"${cardData.randomQuote}"`, statXStart, newStatYStart + statLineHeight * 5.5 + 20, 18, 'Arial', { r: 70, g: 70, b: 70, alpha: 255 }); 
 
 
         const imageBuffer = await sharp(idCardTemplatePath)
