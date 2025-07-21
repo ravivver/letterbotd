@@ -7,25 +7,27 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url'; 
 import fs from 'node:fs/promises'; 
 
+console.log('[formatEmbed.js] File loaded and executing font loaders.');
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const idCardTemplatePath = path.join(__dirname, '..', 'assets', 'letterid_template.png');
-const signatureFontPath = path.join(__dirname, '..', 'assets', 'signature_font.ttf');
+const dancingScriptBoldFontPath = path.join(__dirname, '..', 'assets', 'DancingScript-Bold.ttf'); 
 const arialBlackFontPath = path.join(__dirname, '..', 'assets', 'ariblk.ttf');
 
-let signatureFontBase64 = null;
+let dancingScriptBoldFontBase64 = null; 
 let arialBlackFontBase64 = null;
 
-async function loadSignatureFontBase64() {
-    if (!signatureFontBase64) {
+async function loadDancingScriptBoldFontBase64() {
+    if (!dancingScriptBoldFontBase64) {
         try {
-            const fontBuffer = await fs.readFile(signatureFontPath);
-            signatureFontBase64 = fontBuffer.toString('base64');
-            console.log('Signature font loaded as Base64 successfully.');
+            const fontBuffer = await fs.readFile(dancingScriptBoldFontPath);
+            dancingScriptBoldFontBase64 = fontBuffer.toString('base64');
+            console.log('[formatEmbed.js] Dancing Script Bold font loaded as Base64 successfully.');
         } catch (e) {
-            console.error('Error loading signature font as Base64:', e);
-            signatureFontBase64 = null; 
+            console.error('[formatEmbed.js] Error loading Dancing Script Bold font as Base64:', e);
+            dancingScriptBoldFontBase64 = null; 
         }
     }
 }
@@ -35,15 +37,15 @@ async function loadArialBlackFontBase64() {
         try {
             const fontBuffer = await fs.readFile(arialBlackFontPath);
             arialBlackFontBase64 = fontBuffer.toString('base64');
-            console.log('Arial Black font loaded as Base64 successfully.');
+            console.log('[formatEmbed.js] Arial Black font loaded as Base64 successfully.'); 
         } catch (e) {
-            console.error('Error loading Arial Black font as Base64:', e);
+            console.error('[formatEmbed.js] Error loading Arial Black font as Base64:', e); 
             arialBlackFontBase64 = null; 
         }
     }
 }
 
-loadSignatureFontBase64();
+loadDancingScriptBoldFontBase64(); 
 loadArialBlackFontBase64();
 
 
@@ -504,18 +506,27 @@ async function createLetterIDEmbed(cardData) {
             let fontFamily = 'Arial'; 
             let fontSrc = '';
 
-            if (fontIdentifier === signatureFontPath && signatureFontBase64) {
-                fontFamily = `'Bastliga One'`;
-                fontSrc = `@font-face { font-family: ${fontFamily}; src: url('data:font/ttf;base64,${signatureFontBase64}') format('truetype'); }`;
-            } else if (fontIdentifier === 'Arial Black' && arialBlackFontBase64) {
+            if (fontIdentifier === dancingScriptBoldFontPath && dancingScriptBoldFontBase64) { 
+                fontFamily = `'DancingScriptBoldBase64'`; 
+                fontSrc = `@font-face { font-family: ${fontFamily}; src: url('data:font/ttf;base64,${dancingScriptBoldFontBase64}') format('truetype'); }`;
+            } else if (fontIdentifier === arialBlackFontPath && arialBlackFontBase64) {
                 fontFamily = `'ArialBlackBase64'`; 
                 fontSrc = `@font-face { font-family: ${fontFamily}; src: url('data:font/ttf;base64,${arialBlackFontBase64}') format('truetype'); }`;
-            } else if (typeof fontIdentifier === 'string' && fontIdentifier.endsWith('.ttf')) {
-                fontFamily = `'CustomTTFFont'`; 
-                fontSrc = `@font-face { font-family: ${fontFamily}; src: url('data:font/ttf;base64,${fs.readFileSync(fontIdentifier).toString('base64')}') format('truetype'); }`;
-            } else if (typeof fontIdentifier === 'string') {
+            } 
+            else if (typeof fontIdentifier === 'string' && !fontIdentifier.endsWith('.ttf')) {
                 fontFamily = `'${fontIdentifier}'`; 
             }
+            else if (typeof fontIdentifier === 'string' && fontIdentifier.endsWith('.ttf')) {
+                try {
+                    const fontBuffer = fs.readFileSync(fontIdentifier); 
+                    fontSrc = `@font-face { font-family: 'DynamicTTFFont'; src: url('data:font/ttf;base64,${fontBuffer.toString('base64')}') format('truetype'); }`;
+                    fontFamily = `'DynamicTTFFont'`;
+                } catch (e) {
+                    console.error(`[formatEmbed.js] Failed to load dynamic font ${fontIdentifier}:`, e);
+                    fontFamily = 'sans-serif';
+                }
+            }
+
 
             const svgText = `
                 <svg width="${templateMetadata.width}" height="${templateMetadata.height}">
@@ -535,23 +546,23 @@ async function createLetterIDEmbed(cardData) {
         };
 
 
-        addTextSvgOverlay(cardData.username.toUpperCase(), 15, 785, 55, 'Arial Black', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
+        addTextSvgOverlay(cardData.username.toUpperCase(), 15, 785, 55, arialBlackFontPath, { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
 
-        addTextSvgOverlay(cardData.username, 650, 700, 80, signatureFontPath);
+        addTextSvgOverlay(cardData.username, 650, 700, 80, dancingScriptBoldFontPath); 
         const statXStart = 480;
         const statLineHeight = 60;
         const statFontSize = 60;
 
         const newStatYStart = 250; 
 
-        addTextSvgOverlay(`FILMS WATCHED: ${cardData.totalFilms || 'N/A'}`, statXStart, newStatYStart, statFontSize, 'Arial Black', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
-        addTextSvgOverlay(`FILMS THIS YEAR: ${cardData.filmsThisYear || 'N/A'}`, statXStart, newStatYStart + statLineHeight, statFontSize, 'Arial Black', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
+        addTextSvgOverlay(`FILMS WATCHED: ${cardData.totalFilms || 'N/A'}`, statXStart, newStatYStart, statFontSize, arialBlackFontPath, { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
+        addTextSvgOverlay(`FILMS THIS YEAR: ${cardData.filmsThisYear || 'N/A'}`, statXStart, newStatYStart + statLineHeight, statFontSize, arialBlackFontPath, { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
 
-        addTextSvgOverlay(`FOLLOWERS: ${cardData.followers || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 2, statFontSize, 'Arial Black', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
-        addTextSvgOverlay(`FOLLOWING: ${cardData.following || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 3, statFontSize, 'Arial Black', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
+        addTextSvgOverlay(`FOLLOWERS: ${cardData.followers || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 2, statFontSize, arialBlackFontPath, { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
+        addTextSvgOverlay(`FOLLOWING: ${cardData.following || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 3, statFontSize, arialBlackFontPath, { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
 
-        addTextSvgOverlay(`WATCHLIST: ${cardData.watchlistCount || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 4, statFontSize, 'Arial Black', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
-        addTextSvgOverlay(`MOST COMMON RATING: ${cardData.mostCommonRating || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 5, statFontSize, 'Arial Black', { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
+        addTextSvgOverlay(`WATCHLIST: ${cardData.watchlistCount || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 4, statFontSize, arialBlackFontPath, { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
+        addTextSvgOverlay(`MOST COMMON RATING: ${cardData.mostCommonRating || 'N/A'}`, statXStart, newStatYStart + statLineHeight * 5, statFontSize, arialBlackFontPath, { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
 
         addTextSvgOverlay(`"${cardData.randomQuote}"`, statXStart, newStatYStart + statLineHeight * 5.5 + 20, 18, 'Arial', { r: 70, g: 70, b: 70, alpha: 255 }); 
 
@@ -579,7 +590,7 @@ async function createLetterIDEmbed(cardData) {
         const embed = new EmbedBuilder()
             .setColor(0xFF0000) 
             .setTitle('Error generating Cinephile ID Card')
-            .setDescription('An error occurred while creating your ID card. Please try again later.')
+            .setDescription('An error occurred while creating your ID card! Please try again later.')
             .setFooter({ text: 'LetterBotd' });
         return { embed, attachment: null };
     }
