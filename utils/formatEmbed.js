@@ -182,17 +182,22 @@ async function createReviewEmbed(reviewDetails, tmdbDetails, letterboxdUsername)
 async function createDailyDiaryEmbed(dailyFilms, letterboxdUsername, displayDate) {
     const embed = new EmbedBuilder()
         .setColor(0x00FF00) 
-        .setTitle(`Diary of ${letterboxdUsername} on ${displayDate} 🗓️`);
+        .setTitle(`${letterboxdUsername}'s Diary (${displayDate}) 🗓️`);
 
     let description = '';
     if (dailyFilms.length > 0) {
         for (const filmData of dailyFilms) {
-            description += `**- ${filmData.title}** (${filmData.year})\n`;
-            description += `  Rating: ${convertRatingToStars(filmData.rating)}\n`;
+            const filmTitleWithYearAndLink = 
+                `**- [${filmData.title} (${filmData.year || '????'})](https://letterboxd.com/film/${filmData.slug}/)**`;
+
+            description += `${filmTitleWithYearAndLink}\n`;
+            
+            description += `  Rating: ${convertRatingToStars(filmData.rating)}\n`; 
+            
             if (filmData.tmdbDetails) {
                 description += `  Genres (TMDB): ${filmData.tmdbDetails.genres?.join(', ') || 'N/A'}\n`;
             }
-            description += `  [View on Letterboxd](${filmData.url})\n\n`;
+            description += '\n';
         }
     } else {
         description = `No films watched on this date.`;
@@ -546,7 +551,7 @@ async function createLetterIDEmbed(cardData) {
         };
 
 
-        addTextSvgOverlay(cardData.username.toUpperCase(), 15, 785, 55, arialBlackFontPath, { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
+        addTextSvgOverlay(cardData.username, 15, 785, 55, arialBlackFontPath, { r: 0, g: 0, b: 0, alpha: 255 }, 'bold');
 
         addTextSvgOverlay(cardData.username, 650, 700, 80, dancingScriptBoldFontPath); 
         const statXStart = 480;

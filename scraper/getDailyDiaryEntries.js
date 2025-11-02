@@ -13,35 +13,93 @@ export async function getDailyDiaryEntries(username, date) {
 
     const formattedDate = `${year}-${month}-${day}`; 
 
-    console.log(`[Scraper] Fetching diary for ${username} on ${formattedDate}...`);
-
     try {
         const { data } = await axios.get(url, { headers });
         const $ = cheerio.load(data);
+        
         const diaryRows = $('tr.diary-entry-row');
+        if (diaryRows.length === 0) {
+            return [];
+        }
+        
         const dailyEntries = [];
 
         diaryRows.each((i, element) => {
             const row = $(element);
-            const filmDiv = row.find('td.td-film-details .film-poster');
             
-            const slug = filmDiv.attr('data-film-slug');
-            const title = filmDiv.find('img').attr('alt');
-            const year = row.find('.releasedate a').text().trim();
-            const viewingId = row.attr('data-viewing-id');
+            const filmElementWithData = row.find('.film-poster[data-film-slug]').first();
             
-            const reviewLinkElement = row.find('td.td-review a.icon-review');
+            if (filmElementWithData.length === 0) {
+                const componentFigure = row.find('div.react-component.figure[data-item-slug]').first();
+                if (componentFigure.length === 0) return; 
+
+                const slug = componentFigure.attr('data-item-slug');
+                const titleWithYear = componentFigure.attr('data-item-name');
+                const filmYear = componentFigure.attr('data-item-full-display-name')?.match(/\((\d{4})\)$/)?.[1] || null;
+                
+                let rating = null;
+                const ratingRangeElement = row.find('.rateit-range[aria-valuenow]').first();
+                const ratingInputField = row.find('input.rateit-field[type="range"]').first();
+                
+                if (ratingRangeElement.length) {
+                    rating = parseInt(ratingRangeElement.attr('aria-valuenow'), 10) / 2;
+                } else if (ratingInputField.length) {
+                    rating = parseInt(ratingInputField.val(), 10) / 2;
+                }
+                
+                const reviewLinkElement = row.find('td.col-review a.icon-review');
+                const hasReview = reviewLinkElement.length > 0;
+                const reviewUrl = hasReview ? `https://letterboxd.com${reviewLinkElement.attr('href')}` : null; 
+                
+                let cleanTitle = titleWithYear.replace(` (${filmYear})`, '').trim();
+
+                dailyEntries.push({
+                    slug,
+                    title: cleanTitle,
+                    year: filmYear || null,
+                    viewing_id: row.attr('data-viewing-id'),
+                    hasReview: hasReview,
+                    reviewUrl: reviewUrl,
+                    rating: rating,
+                });
+                return;
+            }
+            
+            const slug = filmElementWithData.attr('data-film-slug');
+            const title = filmElementWithData.find('img').attr('alt'); 
+            let filmYear = row.find('.col-releaseyear span').text().trim() || null; 
+            
+            let rating = null;
+            const ratingRangeElement = row.find('.rateit-range[aria-valuenow]').first();
+            const ratingInputField = row.find('input.rateit-field[type="range"]').first();
+            
+            if (ratingRangeElement.length) {
+                rating = parseInt(ratingRangeElement.attr('aria-valuenow'), 10) / 2;
+            } else if (ratingInputField.length) {
+                rating = parseInt(ratingInputField.val(), 10) / 2;
+            }
+
+            const reviewLinkElement = row.find('td.col-review a.icon-review');
             const hasReview = reviewLinkElement.length > 0;
             const reviewUrl = hasReview ? `https://letterboxd.com${reviewLinkElement.attr('href')}` : null; 
 
-            if (slug && viewingId) {
+            let cleanTitle = title;
+            if (cleanTitle) {
+                cleanTitle = cleanTitle.replace('Poster for ', '').trim();
+                if (filmYear && cleanTitle.endsWith(`(${filmYear})`)) {
+                    cleanTitle = cleanTitle.substring(0, cleanTitle.length - `(${filmYear})`.length).trim();
+                }
+            }
+            
+            if (slug) {
                 dailyEntries.push({
                     slug,
-                    title,
-                    year: year || null,
-                    viewing_id: viewingId,
+                    title: cleanTitle || title,
+                    year: filmYear || null,
+                    viewing_id: row.attr('data-viewing-id'),
                     hasReview: hasReview,
                     reviewUrl: reviewUrl,
+                    rating: rating,
                 });
             }
         });
@@ -49,7 +107,6 @@ export async function getDailyDiaryEntries(username, date) {
 
     } catch (error) {
         if (error.response && error.response.status === 404) {
-            console.log(`[Scraper] No entries found for ${username} on ${formattedDate}.`);
             return [];
         }
         console.error(`[Scraper] Error fetching diary for ${username} on ${formattedDate}:`, error.message);

@@ -27,92 +27,71 @@ async function getFavorites(username) {
         if (mainContent.includes('Sorry, we can’t find the page you’ve requested.')) {
             throw new Error('Letterboxd user not found.');
         }
-
         if (pageTitle.includes('Profile is Private') || mainContent.includes('This profile is private')) {
             throw new Error('Letterboxd profile is private. Cannot access favorites.');
         }
-
         if (response.status === 404) {
             throw new Error('The Letterboxd page returned an unexpected 404 error.');
         }
 
-        const favoritesSection = $('#favourites');
+        const favoritesSection = $('#favourites, section:has(h3.section-heading:contains("Favorite films"))');
         if (!favoritesSection.length) {
-            console.log('Debug Favorites: #favourites section not found. User may not have favorites.');
+            console.log('Debug Favorites: Section for favorites not found.');
             return [];
         }
 
-        const favoriteFilmElements = favoritesSection.find('.poster-list li.favourite-film-poster-container');
+        // NOVO SELETOR CORRIGIDO: Busca pelo item da lista que tem o atributo data-item-slug 
+        // ou a classe favourite-production-poster-container
+        const favoriteFilmElements = favoritesSection.find('.favourite-production-poster-container'); 
 
         if (!favoriteFilmElements.length) {
-            console.log('Debug Favorites: No favorite film elements (.poster-list li.favourite-film-poster-container) found. Favorites section might be empty or initial selectors are incorrect.');
+            console.log('Debug Favorites: No favorite film elements found. Favorites section might be empty or selectors are incorrect.');
             return [];
         }
 
         favoriteFilmElements.slice(0, 4).each((i, element) => {
             const entry = $(element);
-            console.log(`Debug Favorites ${i}: Processing entry...`);
+            
+            // Procura o componente React que contém os metadados (slug, nome)
+            const reactComponent = entry.find('.react-component[data-item-slug]').first();
 
+            if (reactComponent.length === 0) {
+                 console.log(`Debug Favorites ${i}: React component data not found.`);
+                 return true; 
+            }
+
+            const filmSlug = reactComponent.attr('data-item-slug') || null;
+            const currentFilmName = reactComponent.attr('data-item-name') || 'N/A';
             let filmTitle = 'N/A';
             let filmYear = null;
-            let filmSlug = null;
-            let filmUrlLetterboxd = 'N/A';
 
-            filmSlug = entry.attr('data-film-slug') || null;
-            let currentFilmName = entry.attr('data-film-name') || null;
-
-            if (!filmSlug || !currentFilmName) {
-                const descendantWithData = entry.find('[data-film-slug], [data-film-name]').first(); 
-                if (descendantWithData.length) {
-                    filmSlug = filmSlug || descendantWithData.attr('data-film-slug') || null;
-                    currentFilmName = currentFilmName || descendantWithData.attr('data-film-name') || null;
-                }
-            }
-
-            if (filmSlug) {
-                filmUrlLetterboxd = `https://letterboxd.com/film/${filmSlug}/`;
-                console.log(`Debug Favorites ${i}: Slug found: ${filmSlug}`);
-            } else {
-                console.log(`Debug Favorites ${i}: Slug NOT found after all attempts.`);
-            }
-
-            if (currentFilmName) {
+            // Extrai Título e Ano do atributo data-item-name (Ex: "The Double (2013)")
+            if (currentFilmName !== 'N/A') {
                 const match = currentFilmName.match(/^(.*)\s\((\d{4})\)$/);
                 if (match) {
                     filmTitle = match[1].trim();
                     filmYear = parseInt(match[2]);
-                    console.log(`Debug Favorites ${i}: Title/Year from data-film-name: ${filmTitle} (${filmYear})`);
                 } else {
                     filmTitle = currentFilmName.trim();
-                    console.log(`Debug Favorites ${i}: Title from data-film-name (no year): ${filmTitle}`);
                 }
+            } 
+            
+            const filmUrlLetterboxd = filmSlug ? `https://letterboxd.com/film/${filmSlug}/` : 'N/A';
+
+            if (filmSlug) { 
+                favoriteFilms.push({
+                    title: filmTitle, 
+                    year: filmYear,   
+                    slug: filmSlug,   
+                    url: filmUrlLetterboxd
+                });
             } else {
-                console.log(`Debug Favorites ${i}: data-film-name attribute NOT found.`);
+                console.log(`Debug Favorites: Warning: Slug not found for a favorite film.`);
             }
-
-            if (filmTitle === 'N/A') { 
-                const imgElement = entry.find('.film-poster img.image');
-                if (imgElement.length) {
-                    const altText = imgElement.attr('alt');
-                    if (altText) {
-                        filmTitle = altText.trim();
-                        console.log(`Debug Favorites ${i}: Title extracted from image alt (fallback): ${filmTitle}`);
-                    }
-                }
-            }
-
-            console.log(`Debug Favorites ${i}: Final result (slug for next step) -> Provisional Title: "${filmTitle}", Slug: "${filmSlug}", URL: "${filmUrlLetterboxd}"`);
-
-            favoriteFilms.push({
-                title: filmTitle, 
-                year: filmYear,   
-                slug: filmSlug,   
-                url: filmUrlLetterboxd
-            });
         });
 
         if (favoriteFilms.length === 0) {
-            console.log(`Debug: No favorite film processed for "${username}". Check selectors or if the user actually has favorites.`);
+            console.log(`Debug: No favorite film processed for "${username}". Check if the user has at least one film set as favorite.`);
         }
 
         return favoriteFilms;
@@ -121,7 +100,7 @@ async function getFavorites(username) {
         if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'UND_ERR_SOCKET') {
             throw new Error('Could not connect to Letterboxd. Check your internet connection.');
         }
-        if (error.message.includes('Profile is Private') || error.message.includes('User not found')) {
+        if (error.message.includes('Profile is Private') || error.message.includes('User not found') || error.message.includes('404')) {
             throw error;
         }
         console.error(`Unexpected error scraping user favorites for ${username}:`, error.message);

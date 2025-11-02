@@ -15,7 +15,7 @@ export async function getWatchlist(username) {
       const { data } = await axios.get(url, { headers });
       const $ = cheerio.load(data);
 
-      const posters = $('li.poster-container .film-poster');
+      const posters = $('ul.poster-list li .film-poster[data-film-slug]');;
 
       if (posters.length === 0) {
         break;

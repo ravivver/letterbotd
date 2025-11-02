@@ -1,3 +1,4 @@
+// searchLetterboxd.js (CÓDIGO CORRIGIDO)
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
@@ -19,11 +20,21 @@ export async function searchLetterboxd(query) {
       const $ = cheerio.load(filmResponse.data);
       $('li.search-result.-production').each((i, element) => {
         const posterDiv = $(element).find('div.film-poster');
-        const title = posterDiv.find('img').attr('alt');
         const slug = posterDiv.attr('data-film-slug');
-        const year = $(element).find('h2.headline-2 a small.metadata').text();
-        if (title && slug) {
-          results.push({ type: 'film', title, year, slug });
+        
+        if (slug) {
+            const titleElement = $(element).find('h2.headline-2 a');
+            const yearTextElement = titleElement.find('small.metadata');
+            const year = yearTextElement.text().trim().replace(/[\(\)]/g, ''); 
+            
+            let title = titleElement.text().trim();
+            if (year) {
+                title = title.replace(`(${year})`, '').trim();
+            }
+
+            if (title) {
+                results.push({ type: 'film', title, year, slug });
+            }
         }
       });
     }

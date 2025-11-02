@@ -54,13 +54,21 @@ async function getProfileStats(username) {
             console.log("[Scraper - Profile] Warning: Avatar not found with current selector.");
         }
 
-        const profileStatsDiv = $('div.profile-stats.js-profile-stats');
+const profileStatsDiv = $('div.profile-stats.js-profile-stats');
         if (profileStatsDiv.length) {
+            
             const filmsWatchedElement = profileStatsDiv.find('h4.profile-statistic a[href$="/films/"] .value');
             if (filmsWatchedElement.length) stats.totalFilmsWatched = filmsWatchedElement.text().trim();
 
-            const filmsThisYearElement = profileStatsDiv.find('h4.profile-statistic a[href*="/films/diary/for/"] .value');
-            if (filmsThisYearElement.length) stats.filmsThisYear = filmsThisYearElement.text().trim();
+            const currentYear = new Date().getFullYear();
+            const filmsThisYearElement = profileStatsDiv.find(`h4.profile-statistic a[href$="/diary/for/${currentYear}/"] .value`);
+            
+            if (filmsThisYearElement.length) {
+                stats.filmsThisYear = filmsThisYearElement.text().trim();
+            } else {
+                const genericYearElement = profileStatsDiv.find('h4.profile-statistic:has(a[href*="/films/diary/for/"]) .value');
+                if (genericYearElement.length) stats.filmsThisYear = genericYearElement.text().trim();
+            }
 
             const followingElement = profileStatsDiv.find('h4.profile-statistic a[href$="/following/"] .value');
             if (followingElement.length) stats.following = followingElement.text().trim();

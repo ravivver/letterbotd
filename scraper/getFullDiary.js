@@ -16,6 +16,7 @@ export async function getFullDiary(username) {
         try {
             const { data } = await axios.get(url, { headers });
             const $ = cheerio.load(data);
+            // O seletor para a linha principal está correto
             const diaryRows = $('tr.diary-entry-row');
 
             if (diaryRows.length === 0) {
@@ -25,61 +26,78 @@ export async function getFullDiary(username) {
 
             diaryRows.each((i, element) => {
                 const row = $(element);
-                const filmDiv = row.find('td.td-film-details .film-poster');
-                const slug = filmDiv.attr('data-film-slug');
-                const title = filmDiv.find('img').attr('alt');
-                const year = row.find('.releasedate a').text().trim();
-                const ratingSpan = row.find('td.td-rating span.rating');
-                let rating = null;
-                const ratingClass = ratingSpan.attr('class');
-                if (ratingClass) {
-                    const ratingMatch = ratingClass.match(/rated-(\d+)/);
-                    if (ratingMatch) {
-                        rating = parseInt(ratingMatch[1], 10) / 2;
-                    }
+                
+                // CORREÇÃO: Busca o elemento pai que contém os atributos de dados do filme (data-item-slug)
+                const componentFigure = row.find('div.react-component.figure[data-item-slug]').first();
+                
+                if (componentFigure.length === 0) {
+                    console.warn(`[Scraper] Skipping entry: Could not find film data component with slug.`);
+                    return true; // Continua para a próxima linha
                 }
 
-                const dateLinkHref = row.find('td.td-day a').attr('href'); 
+                // Extração dos dados do atributo, que é mais estável
+                const slug = componentFigure.attr('data-item-slug');
+                const titleWithYear = componentFigure.attr('data-item-name');
                 const viewingId = row.attr('data-viewing-id'); 
                 
+                // Extrai o ano da coluna 'Released' (col-releaseyear)
+                const year = row.find('.col-releaseyear span').text().trim(); 
+
+                // Extração da nota (busca o valor no atributo aria-valuenow ou value)
+                let rating = null;
+                const ratingRangeElement = row.find('.rateit-range[aria-valuenow]').first();
+                const ratingInputField = row.find('input.rateit-field[type="range"]').first();
+                
+                if (ratingRangeElement.length) {
+                    rating = parseInt(ratingRangeElement.attr('aria-valuenow'), 10) / 2;
+                } else if (ratingInputField.length) {
+                    rating = parseInt(ratingInputField.val(), 10) / 2;
+                }
+
+                // Extrai a data do link do dia
+                const dateLinkHref = row.find('td.col-daydate a').attr('href'); 
                 let formattedDate = null;
 
                 if (dateLinkHref) {
                     const dateParts = dateLinkHref.match(/\/(\d{4})\/(\d{2})\/(\d{2})\/$/);
                     if (dateParts && dateParts.length === 4) {
                         formattedDate = `${dateParts[1]}-${dateParts[2]}-${dateParts[3]}`;
-                        try {
-                            new Date(formattedDate); 
-                            console.log(`[Scraper Debug] Entry ${i} - Title: ${title}, Viewing ID: '${viewingId}', Formatted Date: '${formattedDate}'`);
-                        } catch (e) {
-                            console.warn(`[Scraper] Error creating Date object for '${formattedDate}' of '${title}': ${e.message}. Using null.`);
-                            formattedDate = null;
-                        }
-                    } else {
-                        console.warn(`[Scraper] Unexpected date format in href for '${title}': '${dateLinkHref}'. Using null.`);
                     }
-                } else {
-                    console.warn(`[Scraper] Day link (td.td-day a) not found for '${title}'.`);
                 }
+                
+                // Limpa o título do poster (Ex: Outcast Rockstar (2019) -> Outcast Rockstar)
+                let cleanTitle = titleWithYear;
+                if (cleanTitle && year && cleanTitle.endsWith(`(${year})`)) {
+                    cleanTitle = cleanTitle.substring(0, cleanTitle.length - `(${year})`.length).trim();
+                }
+                
 
                 if (!viewingId || !formattedDate) { 
-                    console.warn(`[Scraper] Skipping entry '${title}' due to invalid/missing Viewing ID or date.`);
+                    console.warn(`[Scraper] Skipping entry '${cleanTitle}' due to invalid/missing Viewing ID or date.`);
                     return true; 
                 }
 
                 if (slug) {
-                    allDiaryEntries.push({ slug, title, year: year || null, rating, date: formattedDate, viewing_id: viewingId });
+                    allDiaryEntries.push({ 
+                        slug, 
+                        title: cleanTitle || titleWithYear, 
+                        year: year || null, 
+                        rating, 
+                        date: formattedDate, 
+                        viewing_id: viewingId 
+                    });
                 }
             });
             
             page++; 
+            // Pequena pausa para evitar sobrecarregar o servidor
+            await new Promise(resolve => setTimeout(resolve, 500)); 
         } catch (error) {
             if (error.response && error.response.status === 404) {
                 console.log(`[Scraper] Finished on page ${page}. Found ${allDiaryEntries.length} entries in total for ${username}.`);
                 break;
             }
             console.error(`[Scraper] Fatal error during diary fetch on page ${page} for ${username}:`, error.message);
-            console.error(error); 
             break; 
         }
     }

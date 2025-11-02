@@ -2,7 +2,7 @@ import { SlashCommandBuilder, EmbedBuilder, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import getRecentDiaryEntries from '../scraper/getDiary.js';
+import { getDailyDiaryEntries } from '../scraper/getDailyDiaryEntries.js'; 
 import { searchMovieTMDB } from '../api/tmdb.js';
 import { createDailyDiaryEmbed, formatDateEn } from '../utils/formatEmbed.js';
 
@@ -52,9 +52,10 @@ export async function execute(interaction) {
         return;
     }
 
+    let targetDate = new Date();
     if (inputDay && inputMonth && inputYear) {
-        const testDate = new Date(inputYear, inputMonth - 1, inputDay);
-        if (isNaN(testDate.getTime()) || testDate.getDate() !== inputDay || testDate.getMonth() + 1 !== inputMonth || testDate.getFullYear() !== inputYear) {
+        targetDate = new Date(inputYear, inputMonth - 1, inputDay);
+        if (isNaN(targetDate.getTime()) || targetDate.getDate() !== inputDay || targetDate.getMonth() + 1 !== inputMonth || targetDate.getFullYear() !== inputYear) {
             await interaction.reply({
                 content: `Invalid date provided. Please use a valid date format (e.g., day: 09 month: 07 year: 2025).`,
                 ephemeral: true
@@ -62,6 +63,10 @@ export async function execute(interaction) {
             return;
         }
     }
+    
+    const targetDateFormatted = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+    const targetDateEn = formatDateEn(`${String(targetDate.getDate()).padStart(2, '0')} ${targetDate.toLocaleString('en-US', { month: 'short' })} ${targetDate.getFullYear()}`);
+
 
     await interaction.deferReply();
 
@@ -95,23 +100,8 @@ export async function execute(interaction) {
             return;
         }
 
-        let targetDate = new Date();
-        if (inputDay && inputMonth && inputYear) {
-            targetDate = new Date(inputYear, inputMonth - 1, inputDay);
-        }
+        const filmsForTargetDate = await getDailyDiaryEntries(letterboxdUsername, targetDate);
 
-        const targetDateFormatted = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
-        const targetDateEn = formatDateEn(`${String(targetDate.getDate()).padStart(2, '0')} ${targetDate.toLocaleString('en-US', { month: 'short' })} ${targetDate.getFullYear()}`);
-
-        const allRecentFilms = await getRecentDiaryEntries(letterboxdUsername);
-        if (!allRecentFilms || allRecentFilms.length === 0) {
-            await interaction.editReply({
-                content: `Could not find any movies in \`${letterboxdUsername}\`'s diary or the diary is empty.`,
-            });
-            return;
-        }
-
-        const filmsForTargetDate = allRecentFilms.filter(film => film.watchedDateFull === targetDateFormatted);
         if (filmsForTargetDate.length === 0) {
             await interaction.editReply({
                 content: `User \`${letterboxdUsername}\` did not watch any movies on ${targetDateEn}.`,
@@ -122,6 +112,9 @@ export async function execute(interaction) {
         const filmsWithTmdbDetails = [];
         for (const film of filmsForTargetDate) {
             let tmdbDetails = null;
+            film.watchedDateFull = targetDateFormatted;
+            film.url = `https://letterboxd.com/film/${film.slug}/`;
+            
             if (film.title && film.year) {
                 try {
                     tmdbDetails = await searchMovieTMDB(film.title, film.year);
