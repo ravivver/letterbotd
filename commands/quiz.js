@@ -65,7 +65,6 @@ export default {
 
             const allQuizOptions = [quizMovie, ...distractorMovies];
             
-            // FILTRAGEM PARA GARANTIR IDs ÚNICOS
             const finalUniqueQuizMovies = [];
             const finalUsedIds = new Set();
 
@@ -76,14 +75,12 @@ export default {
                 }
             }
 
-            // Garante que ainda há 10 filmes após a filtragem de duplicatas
             if (finalUniqueQuizMovies.length < 10) {
                 await interaction.editReply('Não foi possível encontrar filmes únicos suficientes para o quiz. Tente novamente mais tarde.');
                 activeQuizzes.delete(channelId);
                 return;
             }
 
-            // Embaralha a lista final de filmes únicos
             for (let i = finalUniqueQuizMovies.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [finalUniqueQuizMovies[i], finalUniqueQuizMovies[j]] = [finalUniqueQuizMovies[j], finalUniqueQuizMovies[i]];

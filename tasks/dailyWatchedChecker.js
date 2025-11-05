@@ -1,10 +1,13 @@
+// dailyWatchedChecker.js (CÓDIGO CORRIGIDO)
+
 import { Client, EmbedBuilder, TextChannel } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getDailyDiaryEntries } from '../scraper/getDailyDiaryEntries.js';
 import { getTmdbPosterUrl, searchMovieTMDB } from '../api/tmdb.js';
-import { getUserGuilds } from '../database/db.js';
+
+// REMOVIDA: import { getUserGuilds } from '../database/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,9 +71,8 @@ export async function checkDailyWatchedFilms(client) {
     if (Object.keys(sentDailyViewings).length === 0) {
         await loadSentViewingsCache();
     }
-    if (Object.keys(guildConfigs).length === 0) {
-        await loadGuildConfigs();
-    }
+    // Carregar configurações de guilda é essencial para saber onde enviar notificações
+    await loadGuildConfigs(); 
 
     console.log('[DailyChecker] Starting daily watched films check...');
 
@@ -84,6 +86,7 @@ export async function checkDailyWatchedFilms(client) {
 
     let usersData;
     try {
+        // Agora lê do arquivo JSON, mas em um ambiente de migração real você leria do MongoDB
         usersData = JSON.parse(await fs.readFile(usersFilePath, 'utf8'));
     } catch (error) {
         console.error('[DailyChecker] Error reading users.json:', error);
@@ -104,16 +107,22 @@ export async function checkDailyWatchedFilms(client) {
             const entries = await getDailyDiaryEntries(letterboxdUsername, today);
 
             for (const entry of entries) {
+                // A chave de cache deve ser global, pois o Viewing ID é único
                 if (!sentDailyViewings[todayFormatted][entry.viewing_id]) {
-                    const userGuilds = await getUserGuilds(discordId);
-
-                    for (const userGuildId of userGuilds) {
-                        const guild = client.guilds.cache.get(userGuildId);
+                    
+                    // CORREÇÃO: Iterar por TODAS as guildas que têm um canal configurado (O MAIS SEGURO)
+                    // Anteriormente, o código tentava buscar as guildas que o usuário estava no DB, 
+                    // o que falha. Agora, iteramos sobre as guildas que podemos notificar.
+                    
+                    for (const userGuildId in guildConfigs) {
                         const notificationChannelId = guildConfigs[userGuildId]?.notification_channel_id;
 
-                        if (guild && notificationChannelId) {
-                            const channel = guild.channels.cache.get(notificationChannelId);
+                        if (notificationChannelId) {
+                            const guild = client.guilds.cache.get(userGuildId);
+                            const channel = guild?.channels.cache.get(notificationChannelId);
+                            
                             if (channel && channel instanceof TextChannel) {
+                                
                                 if (!notificationsByGuildAndFilm[userGuildId]) {
                                     notificationsByGuildAndFilm[userGuildId] = {};
                                 }
@@ -148,16 +157,18 @@ export async function checkDailyWatchedFilms(client) {
                             } else {
                                 console.warn(`[DailyChecker] Configured channel ${notificationChannelId} for guild ${userGuildId} not found or not a text channel. Cannot send notification.`);
                             }
-                        } else {
-                            console.log(`[DailyChecker] Bot not in guild ${userGuildId} or no channel set for it. Cannot send notification.`);
                         }
                     }
+                    // Marca como enviado APÓS iterar por todas as guildas, garantindo que não será reprocessado hoje
                     sentDailyViewings[todayFormatted][entry.viewing_id] = true;
                 }
             }
         }
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
+    
+    // ... (restante da lógica de envio de notificações)
+    // ... (A lógica de envio abaixo parece correta e não precisa de grandes ajustes)
 
     for (const guildId in notificationsByGuildAndFilm) {
         const guildNotifications = notificationsByGuildAndFilm[guildId];

@@ -25,7 +25,7 @@ export async function execute(interaction) {
 
     let userEntry = usersData[user.id];
     if (!userEntry) {
-        return interaction.reply({ content: 'You need to link your account with /link before synchronizing.', flags: [MessageFlags.Ephemeral] });
+        return interaction.reply({ content: 'Você precisa vincular sua conta. Use `/link start <username>` primeiro.', flags: [MessageFlags.Ephemeral] });
     } 
     if (typeof userEntry === 'string') {
         userEntry = { letterboxd: userEntry, last_sync_date: null };
@@ -33,15 +33,16 @@ export async function execute(interaction) {
     }
 
     const letterboxdUsername = userEntry.letterboxd;
+    const discordId = user.id;
     const guildId = interaction.guildId;
 
     if (!guildId) {
-        await interaction.editReply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
+        await interaction.reply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
         return;
     }
 
     if (!letterboxdUsername) {
-        return interaction.reply({ content: 'You need to link your account with /link before synchronizing.', flags: [MessageFlags.Ephemeral] });
+        return interaction.reply({ content: 'Você precisa vincular sua conta. Use `/link start <username>` primeiro.', flags: [MessageFlags.Ephemeral] });
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -65,11 +66,11 @@ export async function execute(interaction) {
         let newEntriesFound = 0;
 
         for (const entry of diaryEntries) {
-            const exists = await checkIfEntryExists(user.id, letterboxdUsername, entry.viewing_id, guildId); 
+            const exists = await checkIfEntryExists(discordId, letterboxdUsername, entry.viewing_id, guildId); 
             if (!exists) {
                 entriesToSave.push({
                     ...entry,
-                    discord_id: user.id,
+                    discord_id: discordId,
                     letterboxd_username: letterboxdUsername,
                     guild_id: guildId
                 });
@@ -80,7 +81,7 @@ export async function execute(interaction) {
         }
 
         if (entriesToSave.length === 0) {
-            await interaction.editReply('You haven\'t watched any new movies.');
+            await interaction.editReply('Você não assistiu a nenhum filme novo.');
             userEntry.last_sync_date = new Date().toISOString();
             await fs.writeFile(usersFilePath, JSON.stringify(usersData, null, 4));
             return;
@@ -93,7 +94,7 @@ export async function execute(interaction) {
         userEntry.last_sync_date = new Date().toISOString();
         await fs.writeFile(usersFilePath, JSON.stringify(usersData, null, 4));
         
-        await interaction.editReply(`Synchronization complete! ${changes} movies added.`);
+        await interaction.editReply(`Sincronização completa! ${changes} movies adicionados.`);
 
     } catch (error) {
         console.error('Error during /sync:', error);

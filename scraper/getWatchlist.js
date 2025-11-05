@@ -15,14 +15,14 @@ export async function getWatchlist(username) {
       const { data } = await axios.get(url, { headers });
       const $ = cheerio.load(data);
 
-      const posters = $('ul.poster-list li .film-poster[data-film-slug]');;
+      const posters = $('ul.grid li.griditem .react-component[data-item-slug]');
 
       if (posters.length === 0) {
         break;
       }
 
       posters.each((i, element) => {
-        const slug = $(element).attr('data-film-slug');
+        const slug = $(element).attr('data-item-slug');
         if (slug) {
           filmSlugs.push(slug);
         }

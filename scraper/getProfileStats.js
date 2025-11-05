@@ -54,7 +54,7 @@ async function getProfileStats(username) {
             console.log("[Scraper - Profile] Warning: Avatar not found with current selector.");
         }
 
-const profileStatsDiv = $('div.profile-stats.js-profile-stats');
+        const profileStatsDiv = $('div.profile-stats.js-profile-stats');
         if (profileStatsDiv.length) {
             
             const filmsWatchedElement = profileStatsDiv.find('h4.profile-statistic a[href$="/films/"] .value');
@@ -66,9 +66,11 @@ const profileStatsDiv = $('div.profile-stats.js-profile-stats');
             if (filmsThisYearElement.length) {
                 stats.filmsThisYear = filmsThisYearElement.text().trim();
             } else {
+
                 const genericYearElement = profileStatsDiv.find('h4.profile-statistic:has(a[href*="/films/diary/for/"]) .value');
                 if (genericYearElement.length) stats.filmsThisYear = genericYearElement.text().trim();
             }
+        
 
             const followingElement = profileStatsDiv.find('h4.profile-statistic a[href$="/following/"] .value');
             if (followingElement.length) stats.following = followingElement.text().trim();
@@ -118,4 +120,54 @@ const profileStatsDiv = $('div.profile-stats.js-profile-stats');
     }
 }
 
-export default getProfileStats;
+
+/**
+ * Scrapes the user's Letterboxd profile bio for authentication purposes.
+ * @param {string} username The Letterboxd username.
+ * @returns {Promise<string|null>} The scraped bio text, or throws an error if not found/private.
+ */
+export async function getUserBio(username) {
+    if (!username) {
+        throw new Error('Letterboxd username is required.');
+    }
+    const url = `https://letterboxd.com/${username}/`;
+
+    try {
+        const response = await axios.get(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            },
+            validateStatus: function (status) {
+                return status >= 200 && status < 300 || status === 404;
+            },
+        });
+
+        const $ = cheerio.load(response.data);
+
+        const mainContent = $('#content').text();
+        if (mainContent.includes('Sorry, we can’t find the page you’ve requested.')) {
+            throw new Error('Letterboxd user not found.');
+        }
+        if ($('title').text().includes('Profile is Private') || mainContent.includes('This profile is private')) {
+            throw new Error('Letterboxd profile is private. Cannot access bio.');
+        }
+
+
+        const bioElement = $('.bio .js-bio-content p').first(); 
+        
+        if (bioElement.length) {
+            const bioText = bioElement.text().trim();
+            return bioText;
+        }
+
+        return null; 
+    } catch (error) {
+        if (error.message.includes('User not found') || error.message.includes('Profile is private')) {
+            throw error;
+        }
+        console.error(`Error scraping user bio for ${username}:`, error.message);
+        throw new Error(`An unexpected error occurred while fetching ${username}'s bio.`);
+    }
+}
+
+export default { getProfileStats, getUserBio };

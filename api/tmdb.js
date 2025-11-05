@@ -37,7 +37,7 @@ async function searchMovieTMDB(query, year = null) {
         const directors = credits.crew.filter(member => member.job === 'Director').map(member => member.name);
 
         return {
-            id: movie.id, // Adicionado o ID do TMDB
+            id: movie.id,
             title: movie.title,
             overview: movie.overview,
             poster_path: movie.poster_path,

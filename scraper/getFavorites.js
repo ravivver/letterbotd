@@ -40,8 +40,7 @@ async function getFavorites(username) {
             return [];
         }
 
-        // NOVO SELETOR CORRIGIDO: Busca pelo item da lista que tem o atributo data-item-slug 
-        // ou a classe favourite-production-poster-container
+
         const favoriteFilmElements = favoritesSection.find('.favourite-production-poster-container'); 
 
         if (!favoriteFilmElements.length) {
@@ -52,7 +51,6 @@ async function getFavorites(username) {
         favoriteFilmElements.slice(0, 4).each((i, element) => {
             const entry = $(element);
             
-            // Procura o componente React que contém os metadados (slug, nome)
             const reactComponent = entry.find('.react-component[data-item-slug]').first();
 
             if (reactComponent.length === 0) {
@@ -65,7 +63,6 @@ async function getFavorites(username) {
             let filmTitle = 'N/A';
             let filmYear = null;
 
-            // Extrai Título e Ano do atributo data-item-name (Ex: "The Double (2013)")
             if (currentFilmName !== 'N/A') {
                 const match = currentFilmName.match(/^(.*)\s\((\d{4})\)$/);
                 if (match) {

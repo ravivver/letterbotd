@@ -28,43 +28,39 @@ async function getLikedFilms(username) {
 
             const pageTitle = $('title').text();
             const mainContent = $('#content').text();
-
+            
             if (mainContent.includes('Sorry, we can’t find the page you’ve requested.')) {
-                if (currentPage === 1) {
-                    throw new Error('Letterboxd user not found.');
-                } else {
-                    hasNextPage = false;
-                    break;
-                }
+                if (currentPage === 1) throw new Error('Letterboxd user not found.');
+                else break;
             }
-
             if (pageTitle.includes('Profile is Private') || mainContent.includes('This profile is private')) {
                 throw new Error('Letterboxd profile is private. Cannot access liked films.');
             }
+            if (response.status === 404 && currentPage === 1) throw new Error('The Letterboxd page returned an unexpected 404 error on the first attempt.');
 
-            if (response.status === 404 && currentPage === 1) {
-                throw new Error('The Letterboxd page returned an unexpected 404 error on the first attempt.');
-            }
 
-            const likedFilmElements = $('ul.poster-list li .poster.film-poster[data-film-slug]');
+            const likedFilmElements = $('ul.poster-list li.posteritem');
 
             if (!likedFilmElements.length && currentPage === 1) {
                 console.log(`[Scraper - Likes] No liked films found on page 1 for "${username}" with the current selector.`);
                 return [];
             } else if (!likedFilmElements.length && currentPage > 1) {
-                hasNextPage = false;
                 break;
             }
 
             likedFilmElements.each((i, element) => {
                 const entry = $(element);
+                
+                const reactComponent = entry.find('.react-component[data-item-slug]').first();
+                
+                if (reactComponent.length === 0) return true;
 
-                const filmSlug = entry.attr('data-film-slug') || null;
-                const filmUrlLetterboxd = filmSlug ? `https://letterboxd.com/film/${filmSlug}/` : 'N/A';
+                const filmSlug = reactComponent.attr('data-item-slug') || null;
+                const dataFilmName = reactComponent.attr('data-item-name') || null;
 
                 let filmTitle = 'N/A';
                 let filmYear = null;
-                const dataFilmName = entry.attr('data-film-name');
+
                 if (dataFilmName) {
                     const match = dataFilmName.match(/^(.*)\s\((\d{4})\)$/);
                     if (match) {
@@ -73,11 +69,6 @@ async function getLikedFilms(username) {
                     } else {
                         filmTitle = dataFilmName.trim(); 
                     }
-                } else {
-                    const imgElement = entry.find('img.image');
-                    if (imgElement.length) {
-                        filmTitle = imgElement.attr('alt') || 'N/A';
-                    }
                 }
 
                 if (filmSlug) { 
@@ -85,21 +76,16 @@ async function getLikedFilms(username) {
                         title: filmTitle, 
                         year: filmYear,   
                         slug: filmSlug,   
-                        url: filmUrlLetterboxd
+                        url: `https://letterboxd.com/film/${filmSlug}/`
                     });
-                } else {
-                    console.log(`[Scraper - Likes] Warning: Slug not found for a liked film on page ${currentPage}. Entry: ${entry.html().substring(0, 100)}...`);
                 }
             });
 
             currentPage++;
             const nextButton = $('.pagination .next');
-            const prevButton = $('.pagination .previous');
 
             if (nextButton.length > 0) {
                 hasNextPage = true;
-            } else if (prevButton.length > 0 && nextButton.length === 0) {
-                hasNextPage = false;
             } else {
                 hasNextPage = false;
             }

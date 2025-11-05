@@ -1,15 +1,25 @@
-import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
 import fs from 'node:fs/promises'; 
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { checkUserExists } from '../scraper/checkUserExists.js'; 
 import { getFullDiary } from '../scraper/getFullDiary.js'; 
 import { saveDiaryEntries } from '../database/db.js'; 
+import { getUserBio } from '../scraper/getProfileStats.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const usersFilePath = path.join(__dirname, '..', 'storage', 'users.json');
+
+const activeChallenges = new Map();
+const CHALLENGE_TIMEOUT_MS = 300000; 
+
+function generateAuthKey() {
+    const words = ['cinema', 'screen', 'retia', 'movie', 'film', 'botd', 'tarantino', 'emanuel', 'kaxu', 'chad', 'auth', 'magic'];
+    const key = Array.from({ length: 4 }, () => words[Math.floor(Math.random() * words.length)]).join(' ');
+    return key;
+}
 
 export const data = new SlashCommandBuilder()
     .setName('link')
@@ -20,107 +30,145 @@ export const data = new SlashCommandBuilder()
             .setRequired(true));
 
 export async function execute(interaction) {
+    const user = interaction.user;
+    const discordId = user.id;
+    const guildId = interaction.guildId;
+    const letterboxdUsernameInput = interaction.options.getString('username').trim();
+    
     await interaction.deferReply({ flags: MessageFlags.Ephemeral }); 
 
-    const letterboxdUsername = interaction.options.getString('username').trim();
-    const discordId = interaction.user.id;
-    const guildId = interaction.guildId;
+    let usersData;
+    try {
+        usersData = JSON.parse(await fs.readFile(usersFilePath, 'utf8'));
+    } catch (error) {
+        usersData = {};
+    }
+    
+    let userEntry = usersData[discordId];
+    let isAlreadyLinked = userEntry && userEntry.letterboxd;
+    const currentLinkedUsername = isAlreadyLinked ? userEntry.letterboxd : null;
 
     if (!guildId) {
-        await interaction.editReply({ content: 'This command can only be used in a server.', flags: MessageFlags.Ephemeral });
-        return;
+        return interaction.editReply({ content: 'This command can only be used in a server.' });
     }
 
-    let users = {};
-    try {
-        const data = await fs.readFile(usersFilePath, 'utf8');
-        users = JSON.parse(data);
-    } catch (readError) {
-        if (readError.code === 'ENOENT') {
-            users = {}; 
-        } else {
-            console.error(`Error reading users.json: ${readError.message}`);
-            await interaction.editReply({
-                content: 'An internal error occurred while trying to read user links. Please try again later.',
-                flags: MessageFlags.Ephemeral
-            });
-            return;
-        }
+    if (isAlreadyLinked) {
+         return interaction.editReply({ 
+             content: `Your account is already linked to **${currentLinkedUsername}**. Use \`/unlink\` to change the account.`,
+             flags: MessageFlags.Ephemeral
+         });
+    }
+    
+    if (activeChallenges.has(discordId)) {
+        clearTimeout(activeChallenges.get(discordId).timeoutId);
+        activeChallenges.delete(discordId);
     }
 
-    for (const id in users) {
-        let linkedUsername;
-        if (typeof users[id] === 'string') {
-            linkedUsername = users[id];
-        } else if (typeof users[id] === 'object' && users[id] !== null) {
-            linkedUsername = users[id].letterboxd;
-        }
-
-        if (linkedUsername && linkedUsername.toLowerCase() === letterboxdUsername.toLowerCase() && id !== discordId) {
-            await interaction.editReply({
-                content: `The username \`${letterboxdUsername}\` is already linked to another Discord account. Please contact an administrator to resolve this.`,
-                flags: MessageFlags.Ephemeral
-            });
-            return;
-        }
-    }
-
-    const verification = await checkUserExists(letterboxdUsername);
-
-    if (verification.status !== 'SUCCESS') {
-        await interaction.editReply({ 
-            content: `Could not link: ${verification.message}`,
-            flags: MessageFlags.Ephemeral
-        });
-        return; 
-    }
 
     try {
-        users[discordId] = {
-            letterboxd: letterboxdUsername,
-            last_sync_date: null 
-        };
+        const userCheck = await checkUserExists(letterboxdUsernameInput);
+        if (userCheck.status !== 'SUCCESS') {
+            return interaction.editReply({ content: userCheck.message });
+        }
 
-        await fs.writeFile(usersFilePath, JSON.stringify(users, null, 4), 'utf8');
+        const authKey = generateAuthKey();
+        
+        const checkButtonId = `link_check_${discordId}`;
+        const checkButton = new ButtonBuilder()
+            .setCustomId(checkButtonId)
+            .setLabel('Check Bio')
+            .setStyle(ButtonStyle.Primary);
 
-        await interaction.editReply({
-            content: `Your Discord account has been successfully linked to the Letterboxd profile: \`${letterboxdUsername}\`. Initiating initial diary synchronization... This may take a few minutes!`,
-            flags: MessageFlags.Ephemeral
+        const actionRow = new ActionRowBuilder().addComponents(checkButton);
+
+        const instructions = [
+            `1. **Add these secret words** to your [Letterboxd bio](https://letterboxd.com/settings/): \`${authKey}\``,
+            `2. Click the button below to complete.`
+        ].join('\n');
+
+        const initialReply = await interaction.editReply({ 
+            content: `**Authentication Challenge for @${letterboxdUsernameInput}:**\n\n${instructions}`,
+            components: [actionRow]
         });
 
+        const timeoutId = setTimeout(async () => {
+            if (activeChallenges.has(discordId)) {
+                await initialReply.edit({ content: 'Verification timed out. Please run the command again to start a new challenge.', components: [] }).catch(console.error);
+                activeChallenges.delete(discordId);
+            }
+        }, CHALLENGE_TIMEOUT_MS);
+        
+        activeChallenges.set(discordId, { 
+            username: letterboxdUsernameInput, 
+            key: authKey, 
+            timeoutId: timeoutId,
+            interactionId: interaction.id
+        });
+
+
+        
+        const collectorFilter = i => i.customId === checkButtonId && i.user.id === discordId;
+        
         try {
-            const diaryEntries = await getFullDiary(letterboxdUsername); 
+            const buttonInteraction = await initialReply.awaitMessageComponent({
+                filter: collectorFilter,
+                componentType: ComponentType.Button,
+                time: CHALLENGE_TIMEOUT_MS
+            });
+            
+            await buttonInteraction.deferUpdate();
 
-            if (!diaryEntries || diaryEntries.length === 0) {
-                await interaction.followUp({ content: 'Your Letterboxd diary appears to be empty or has no entries. Nothing to sync initially.', flags: MessageFlags.Ephemeral });
-            } else {
-                const { changes } = await saveDiaryEntries(diaryEntries.map(entry => ({
+            const challenge = activeChallenges.get(discordId);
+
+            if (!challenge) {
+                return interaction.editReply({ content: 'Challenge expired. Please run the command again.', components: [] });
+            }
+            
+            const bio = await getUserBio(challenge.username);
+
+            if (bio && bio.includes(challenge.key)) {
+                clearTimeout(challenge.timeoutId);
+                activeChallenges.delete(discordId);
+
+                const newLinkEntry = { letterboxd: challenge.username, last_sync_date: new Date().toISOString() };
+                usersData[discordId] = newLinkEntry;
+                await fs.writeFile(usersFilePath, JSON.stringify(usersData, null, 4));
+
+                const diaryEntries = await getFullDiary(challenge.username);
+                const syncData = diaryEntries.map(entry => ({
                     ...entry,
                     discord_id: discordId,
-                    letterboxd_username: letterboxdUsername,
+                    letterboxd_username: challenge.username,
                     guild_id: guildId
-                })));
+                }));
+                const { changes } = await saveDiaryEntries(syncData);
                 
-                users[discordId].last_sync_date = new Date().toISOString();
-                await fs.writeFile(usersFilePath, JSON.stringify(users, null, 4));
+                await interaction.editReply({ 
+                    content: `✅ Authentication successful! Account **${challenge.username}** linked and initial synchronization complete! (${changes} new entries added to the database).`,
+                    components: []
+                });
 
-                await interaction.followUp({ 
-                    content: `Initial synchronization complete! (${changes} new entries were added to the database).`,
-                    flags: MessageFlags.Ephemeral
+            } else {
+                await interaction.editReply({ 
+                    content: `❌ Verification failed. The secret phrase **\`${challenge.key}\`** was not found in the bio of **${challenge.username}**. Please ensure it is saved correctly and try again by clicking the button.`,
+                    components: [actionRow] 
                 });
             }
-        } catch (syncError) {
-            console.error(`Error during initial /link synchronization for ${letterboxdUsername}:`, syncError);
-            await interaction.followUp({
-                content: `An error occurred during the initial synchronization of your diary: ${syncError.message}. You can try using \`/sync\` later.`,
-                flags: MessageFlags.Ephemeral
-            });
+
+        } catch (error) {
+             if (error.message.includes('time')) {
+             } else {
+                 console.error(`Error during button verification for ${letterboxdUsernameInput}:`, error);
+                 await interaction.editReply({ content: `An unexpected error occurred during verification: ${error.message}`, components: [] });
+                 activeChallenges.delete(discordId);
+             }
         }
 
+
     } catch (error) {
-        console.error(`Error linking user ${discordId} with ${letterboxdUsername}:`, error);
+        console.error(`Error processing /link command:`, error);
         await interaction.editReply({
-            content: `An error occurred while linking your Letterboxd account. Details: ${error.message}`,
+            content: `An error occurred while starting the link process: ${error.message}`,
             flags: MessageFlags.Ephemeral
         });
     }

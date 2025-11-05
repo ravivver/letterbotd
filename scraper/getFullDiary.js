@@ -16,7 +16,6 @@ export async function getFullDiary(username) {
         try {
             const { data } = await axios.get(url, { headers });
             const $ = cheerio.load(data);
-            // O seletor para a linha principal está correto
             const diaryRows = $('tr.diary-entry-row');
 
             if (diaryRows.length === 0) {
@@ -27,23 +26,19 @@ export async function getFullDiary(username) {
             diaryRows.each((i, element) => {
                 const row = $(element);
                 
-                // CORREÇÃO: Busca o elemento pai que contém os atributos de dados do filme (data-item-slug)
                 const componentFigure = row.find('div.react-component.figure[data-item-slug]').first();
                 
                 if (componentFigure.length === 0) {
                     console.warn(`[Scraper] Skipping entry: Could not find film data component with slug.`);
-                    return true; // Continua para a próxima linha
+                    return true; 
                 }
 
-                // Extração dos dados do atributo, que é mais estável
                 const slug = componentFigure.attr('data-item-slug');
                 const titleWithYear = componentFigure.attr('data-item-name');
                 const viewingId = row.attr('data-viewing-id'); 
                 
-                // Extrai o ano da coluna 'Released' (col-releaseyear)
                 const year = row.find('.col-releaseyear span').text().trim(); 
 
-                // Extração da nota (busca o valor no atributo aria-valuenow ou value)
                 let rating = null;
                 const ratingRangeElement = row.find('.rateit-range[aria-valuenow]').first();
                 const ratingInputField = row.find('input.rateit-field[type="range"]').first();
@@ -54,7 +49,6 @@ export async function getFullDiary(username) {
                     rating = parseInt(ratingInputField.val(), 10) / 2;
                 }
 
-                // Extrai a data do link do dia
                 const dateLinkHref = row.find('td.col-daydate a').attr('href'); 
                 let formattedDate = null;
 
@@ -65,7 +59,6 @@ export async function getFullDiary(username) {
                     }
                 }
                 
-                // Limpa o título do poster (Ex: Outcast Rockstar (2019) -> Outcast Rockstar)
                 let cleanTitle = titleWithYear;
                 if (cleanTitle && year && cleanTitle.endsWith(`(${year})`)) {
                     cleanTitle = cleanTitle.substring(0, cleanTitle.length - `(${year})`.length).trim();
@@ -90,7 +83,6 @@ export async function getFullDiary(username) {
             });
             
             page++; 
-            // Pequena pausa para evitar sobrecarregar o servidor
             await new Promise(resolve => setTimeout(resolve, 500)); 
         } catch (error) {
             if (error.response && error.response.status === 404) {
