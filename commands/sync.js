@@ -25,7 +25,7 @@ export async function execute(interaction) {
 
     let userEntry = usersData[user.id];
     if (!userEntry) {
-        return interaction.reply({ content: 'Você precisa vincular sua conta. Use `/link start <username>` primeiro.', flags: [MessageFlags.Ephemeral] });
+        return interaction.reply({ content: 'u need to link. use `/link start <username>` .', flags: [MessageFlags.Ephemeral] });
     } 
     if (typeof userEntry === 'string') {
         userEntry = { letterboxd: userEntry, last_sync_date: null };
