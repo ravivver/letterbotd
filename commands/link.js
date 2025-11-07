@@ -1,3 +1,4 @@
+
 import { SlashCommandBuilder, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } from 'discord.js';
 import fs from 'node:fs/promises'; 
 import path from 'node:path';
@@ -5,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { checkUserExists } from '../scraper/checkUserExists.js'; 
 import { getFullDiary } from '../scraper/getFullDiary.js'; 
 import { saveDiaryEntries } from '../database/db.js'; 
-import { getUserBio } from '../scraper/getProfileStats.js';
+import ProfileScrapers from '../scraper/getProfileStats.js'; 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -124,7 +125,7 @@ export async function execute(interaction) {
                 return interaction.editReply({ content: 'Challenge expired. Please run the command again.', components: [] });
             }
             
-            const bio = await getUserBio(challenge.username);
+            const bio = await ProfileScrapers.getUserBio(challenge.username);
 
             if (bio && bio.includes(challenge.key)) {
                 clearTimeout(challenge.timeoutId);

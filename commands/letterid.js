@@ -1,11 +1,13 @@
+// letterid.js (CÓDIGO CORRIGIDO)
+
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url'; 
-import getProfileStats from '../scraper/getProfileStats.js'; 
+import ProfileScrapers from '../scraper/getProfileStats.js'; 
 import { getFullDiary } from '../scraper/getFullDiary.js'; 
 import { createLetterIDEmbed } from '../utils/formatEmbed.js'; 
-import { searchMovieTMDB, getMovieQuotesTMDB } from '../api/tmdb.js';
+import { searchMovieTMDB } from '../api/tmdb.js'; 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,7 +72,7 @@ export default {
         }
 
         try {
-            const profileStats = await getProfileStats(letterboxdUsername);
+            const profileStats = await ProfileScrapers.getProfileStats(letterboxdUsername);
 
             if (!profileStats) {
                 await interaction.editReply({
@@ -101,27 +103,7 @@ export default {
                 mostCommonRating = commonRating !== null ? `${parseFloat(commonRating)} stars` : 'N/A';
             }
 
-            let selectedQuote = null;
-            if (fullDiary && fullDiary.length > 0) {
-                const recentFilms = fullDiary.slice(0, 5); 
-                for (const film of recentFilms) {
-                    if (film.title && film.year) {
-                        const tmdbMovie = await searchMovieTMDB(film.title, film.year);
-                        if (tmdbMovie && tmdbMovie.id) {
-                            const tmdbQuote = await getMovieQuotesTMDB(tmdbMovie.id);
-                            if (tmdbQuote) {
-                                selectedQuote = tmdbQuote;
-                                break; 
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!selectedQuote) {
-                selectedQuote = getRandomQuote();
-            }
-
+            let selectedQuote = getRandomQuote();
 
             const cardData = {
                 username: letterboxdUsername,

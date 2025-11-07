@@ -2,7 +2,7 @@ import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url'; 
-import getProfileStats from '../scraper/getProfileStats.js'; 
+import ProfileScrapers from '../scraper/getProfileStats.js'; 
 import { createProfileEmbed } from '../utils/formatEmbed.js'; 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -64,7 +64,8 @@ export async function execute(interaction) {
             return;
         }
 
-        const profileStats = await getProfileStats(letterboxdUsername);
+
+        const profileStats = await ProfileScrapers.getProfileStats(letterboxdUsername);
 
         if (!profileStats) {
             await interaction.editReply({
